@@ -3,6 +3,7 @@ GRIEEVIO - Smart Complaint & Civic Issue Management System
 Main Flask Application
 """
 
+import os
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -27,9 +28,11 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-# Create tables on startup
+# Create tables and directories on startup
 with app.app_context():
     db.create_all()
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

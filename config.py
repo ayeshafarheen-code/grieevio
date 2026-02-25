@@ -1,6 +1,10 @@
 import os
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+# Handle Vercel's read-only filesystem
+if os.environ.get('VERCEL'):
+    BASE_DIR = '/tmp'
+else:
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config:
