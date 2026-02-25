@@ -1,14 +1,14 @@
 import os
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session  # type: ignore
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user  # type: ignore
+from flask_cors import CORS  # type: ignore
+from werkzeug.utils import secure_filename  # type: ignore
 
 # Local imports
-from config import Config
-from models import db, User, Complaint
-from ai_engine import classify_complaint, detect_language, translate_text, get_category_suggestions
+from config import Config  # type: ignore
+from models import db, User, Complaint  # type: ignore
+from ai_engine import classify_complaint, detect_language, translate_text, get_category_suggestions  # type: ignore
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -264,7 +264,7 @@ def api_voice_to_text():
     file.save(filepath)
 
     try:
-        import speech_recognition as sr
+        import speech_recognition as sr  # type: ignore
         recognizer = sr.Recognizer()
         with sr.AudioFile(filepath) as source:
             audio_data = recognizer.record(source)

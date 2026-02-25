@@ -1,0 +1,18 @@
+[project]
+name = "grieevio"
+version = "0.1.0"
+dependencies = [
+    "Flask",
+    "Flask-SQLAlchemy",
+    "Flask-Login",
+    "Flask-CORS",
+    "langdetect",
+    "googletrans==4.0.0-rc1",
+    "SpeechRecognition",
+    "gunicorn"
+]
+
+[tool.pyright]
+include = ["."]
+extraPaths = ["C:/Users/Ayesha Farheen/AppData/Local/Programs/Python/Python312/Lib/site-packages"]
+typeCheckingMode = "basic"
