@@ -1,6 +1,11 @@
 [project]
 name = "grieevio"
 version = "0.1.0"
+description = "AI-powered civic complaint management system"
+authors = [
+    { name = "Ayesha Farheen" }
+]
+requires-python = ">=3.12"
 dependencies = [
     "Flask",
     "Flask-SQLAlchemy",
