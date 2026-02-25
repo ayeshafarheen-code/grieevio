@@ -1,5 +1,4 @@
 import os
-import speech_recognition as sr
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -261,13 +260,17 @@ def api_voice_to_text():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    recognizer = sr.Recognizer()
     try:
+        import speech_recognition as sr
+        recognizer = sr.Recognizer()
         with sr.AudioFile(filepath) as source:
             audio_data = recognizer.record(source)
-            # Using Google Web Speech API (basic, no key required for small use)
             text = recognizer.recognize_google(audio_data)
             return jsonify({'text': text})
+    except ImportError:
+        return jsonify({'error': 'Speech recognition library not available on server'}), 501
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     except sr.UnknownValueError:
         return jsonify({'error': 'Could not understand audio'}), 422
     except sr.RequestError as e:
