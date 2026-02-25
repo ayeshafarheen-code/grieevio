@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Complaint – GRIEEVIO</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="bg-effects">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="/" class="navbar-brand"><span class="brand-icon">⚡</span> GRIEEVIO</a>
+            <ul class="navbar-nav">
+                <li><a href="/dashboard" class="nav-link">Dashboard</a></li>
+                <li><a href="/new-complaint" class="nav-link active">New Complaint</a></li>
+                <li><a href="/track" class="nav-link">Track</a></li>
+                <li><a href="#" class="nav-link" onclick="handleLogout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="complaint-form-wrapper">
+            <div class="page-header" style="justify-content: center; text-align: center;">
+                <div>
+                    <h1>📝 Submit a Complaint</h1>
+                    <p class="subtitle">Describe your issue using text or voice — our AI will classify and route it
+                        automatically</p>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <!-- Input Mode Toggle -->
+                <div class="input-mode-toggle">
+                    <button class="mode-btn active" id="text-mode-btn" onclick="switchMode('text')">⌨️ Text
+                        Input</button>
+                    <button class="mode-btn" id="voice-mode-btn" onclick="switchMode('voice')">🎙️ Voice Input</button>
+                </div>
+
+                <!-- Voice Input Area (hidden by default) -->
+                <div class="voice-area" id="voice-area" style="display: none;">
+                    <button class="voice-btn" id="voice-record-btn" onclick="toggleVoice()">🎤</button>
+                    <div class="voice-status" id="voice-status">Click the microphone to start recording</div>
+                    <div style="margin-top: 1rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-secondary);">Voice Language:</label>
+                        <select id="voice-language" class="admin-select" style="margin-left: 0.5rem;"
+                            onchange="changeVoiceLang()">
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="ta">Tamil</option>
+                            <option value="te">Telugu</option>
+                            <option value="kn">Kannada</option>
+                            <option value="ml">Malayalam</option>
+                            <option value="mr">Marathi</option>
+                            <option value="bn">Bengali</option>
+                            <option value="gu">Gujarati</option>
+                            <option value="pa">Punjabi</option>
+                            <option value="ur">Urdu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <form id="complaint-form" onsubmit="handleSubmitComplaint(event)">
+                    <div class="form-group">
+                        <label for="complaint-title">Complaint Title</label>
+                        <input type="text" id="complaint-title" class="form-control"
+                            placeholder="Brief title of your issue" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="complaint-desc">Description</label>
+                        <textarea id="complaint-desc" class="form-control" placeholder="Describe the issue in detail..."
+                            required oninput="onDescriptionChange()"></textarea>
+                        <span class="language-indicator" id="language-indicator" style="display: none;"></span>
+                    </div>
+
+                    <!-- AI Suggestion (appears dynamically) -->
+                    <div class="ai-suggestion" id="ai-suggestion" style="display: none;"></div>
+
+                    <div class="form-group">
+                        <label for="complaint-location">Location</label>
+                        <input type="text" id="complaint-location" class="form-control"
+                            placeholder="e.g., Main Street, Sector 15, Near Bus Stop">
+                    </div>
+
+                    <!-- AI Result (shown after submission) -->
+                    <div class="ai-suggestion" id="ai-result" style="display: none;"></div>
+
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+                        📩 Submit Complaint
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 <span class="footer-brand">GRIEEVIO</span></p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/voice.js"></script>
+    <script src="/static/js/complaints.js"></script>
+    <script>
+        let voiceInput;
+
+        function switchMode(mode) {
+            document.getElementById('text-mode-btn').classList.toggle('active', mode === 'text');
+            document.getElementById('voice-mode-btn').classList.toggle('active', mode === 'voice');
+            document.getElementById('voice-area').style.display = mode === 'voice' ? 'block' : 'none';
+
+            if (mode === 'voice' && !voiceInput) {
+                voiceInput = new VoiceInput({
+                    targetInput: document.getElementById('complaint-desc'),
+                    statusElement: document.getElementById('voice-status'),
+                    onResult: function (text, isFinal) {
+                        if (isFinal) onDescriptionChange();
+                    }
+                });
+            }
+        }
+
+        function toggleVoice() {
+            if (!voiceInput) return;
+            const btn = document.getElementById('voice-record-btn');
+            const recording = voiceInput.toggle();
+            btn.classList.toggle('recording', recording);
+            btn.textContent = recording ? '⏹️' : '🎤';
+        }
+
+        function changeVoiceLang() {
+            if (voiceInput) {
+                voiceInput.setLanguage(document.getElementById('voice-language').value);
+            }
+        }
+    </script>
+</body>
+
+</html>

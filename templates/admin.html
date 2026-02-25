@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – GRIEEVIO</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="bg-effects">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="/" class="navbar-brand"><span class="brand-icon">⚡</span> GRIEEVIO</a>
+            <ul class="navbar-nav">
+                <li><a href="/admin" class="nav-link active">🛡️ Admin Panel</a></li>
+                <li><a href="#" class="nav-link" onclick="handleLogout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="page-header">
+            <div>
+                <h1>🛡️ Admin Dashboard</h1>
+                <p class="subtitle">Manage complaints, assign priorities, and track resolution metrics</p>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">📊</div>
+                <div class="stat-value" id="admin-total">0</div>
+                <div class="stat-label">Total Complaints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon yellow">📨</div>
+                <div class="stat-value" id="admin-submitted">0</div>
+                <div class="stat-label">Submitted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">🔄</div>
+                <div class="stat-value" id="admin-progress">0</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">✅</div>
+                <div class="stat-value" id="admin-resolved">0</div>
+                <div class="stat-label">Resolved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red">❌</div>
+                <div class="stat-value" id="admin-rejected">0</div>
+                <div class="stat-label">Rejected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">📈</div>
+                <div class="stat-value" id="admin-rate">0%</div>
+                <div class="stat-label">Resolution Rate</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h3>📂 Complaints by Category</h3>
+                <div class="bar-chart" id="category-chart">
+                    <p style="color: var(--text-muted); text-align: center; padding: 1rem;">Loading...</p>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>⚡ Complaints by Priority</h3>
+                <div class="bar-chart" id="priority-chart">
+                    <p style="color: var(--text-muted); text-align: center; padding: 1rem;">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complaints Table -->
+        <div class="complaints-section">
+            <div class="complaints-header">
+                <h2>All Complaints</h2>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-type="status"
+                        onclick="adminFilter('status', '')">All</button>
+                    <button class="filter-btn" data-type="status"
+                        onclick="adminFilter('status', 'Submitted')">Submitted</button>
+                    <button class="filter-btn" data-type="status" onclick="adminFilter('status', 'In Progress')">In
+                        Progress</button>
+                    <button class="filter-btn" data-type="status"
+                        onclick="adminFilter('status', 'Resolved')">Resolved</button>
+                    <button class="filter-btn" data-type="status"
+                        onclick="adminFilter('status', 'Rejected')">Rejected</button>
+                </div>
+            </div>
+            <div class="admin-table-wrapper" style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Complaint</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-complaints-body">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 3rem;">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 <span class="footer-brand">GRIEEVIO</span> — Admin Panel</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/complaints.js"></script>
+    <script src="/static/js/admin.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', loadAdminDashboard);</script>
+</body>
+
+</html>

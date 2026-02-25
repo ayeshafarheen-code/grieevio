@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Database
+grieevio.db
+
+# Uploads
+uploads/
+*.log
+
+# IDE
+.vscode/
+.idea/
+.gemini/
+.agent/
+brain/
