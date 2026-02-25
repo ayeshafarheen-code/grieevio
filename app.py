@@ -1,13 +1,12 @@
-"""
-GRIEEVIO - Smart Complaint & Civic Issue Management System
-Main Flask Application
-"""
-
 import os
-from datetime import datetime
+import speech_recognition as sr
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
+
+# Local imports
 from config import Config
 from models import db, User, Complaint
 from ai_engine import classify_complaint, detect_language, translate_text, get_category_suggestions
@@ -258,10 +257,6 @@ def api_voice_to_text():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
-    import speech_recognition as sr
-    import os
-    from werkzeug.utils import secure_filename
-
     filename = secure_filename(file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
@@ -356,7 +351,6 @@ def admin_stats():
     ).group_by(Complaint.priority).all()
 
     # Recent complaints (last 7 days)
-    from datetime import timedelta
     week_ago = datetime.utcnow() - timedelta(days=7)
     recent = Complaint.query.filter(Complaint.created_at >= week_ago).count()
 
