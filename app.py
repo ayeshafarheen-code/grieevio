@@ -27,10 +27,13 @@ def load_user(user_id):
 
 
 # Create tables and directories on startup
-with app.app_context():
-    db.create_all()
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+try:
+    with app.app_context():
+        db.create_all()
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+except Exception as e:
+    print(f"Startup warning: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
