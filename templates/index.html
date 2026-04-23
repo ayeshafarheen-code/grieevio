@@ -51,6 +51,32 @@
             </div>
         </div>
     </section>
+    
+    <!-- Transparency Dashboard Section -->
+    <section class="transparency">
+        <div class="section-header">
+            <h2>Live <span class="gradient-text">City Health</span> Dashboard</h2>
+            <p>Real-time transparency into grievance resolution across the city.</p>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4 id="stat-total">0</h4>
+                <p>Total Issues Reported</p>
+            </div>
+            <div class="stat-card highlight">
+                <h4 id="stat-resolved">0</h4>
+                <p>Issues Resolved</p>
+            </div>
+            <div class="stat-card">
+                <h4 id="stat-rate">0%</h4>
+                <p>Resolution Rate</p>
+            </div>
+            <div class="stat-card">
+                <h4 id="stat-active">0</h4>
+                <p>Active Now</p>
+            </div>
+        </div>
+    </section>
 
     <!-- Features Section -->
     <section class="features" id="features">
@@ -81,14 +107,24 @@
                 <p>Track your complaint status in real-time with a visual timeline. Know exactly where your issue stands.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon" style="background: rgba(245, 158, 11, 0.15);">⚡</div>
-                <h3>Instant Routing</h3>
-                <p>Complaints are automatically forwarded to the relevant department, eliminating manual processing delays.</p>
+                <div class="feature-icon" style="background: rgba(16, 185, 129, 0.15);">✅</div>
+                <h3>AI "Proof of Work"</h3>
+                <p>Visual verification uses AI to compare 'Before' and 'After' photos, ensuring issues are actually fixed before closing.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon" style="background: rgba(239, 68, 68, 0.15);">📈</div>
-                <h3>Admin Analytics</h3>
-                <p>Authorities get powerful dashboards with category breakdowns, priority stats, and resolution rate analytics.</p>
+                <div class="feature-icon" style="background: rgba(245, 158, 11, 0.15);">🏆</div>
+                <h3>Civic Gamification</h3>
+                <p>Earn points and badges for reporting valid issues. Become a 'Civic Hero' and help build a better community.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background: rgba(239, 68, 68, 0.15);">🚨</div>
+                <h3>Emergency One-Tap</h3>
+                <p>Instantly report life-threatening issues (fallen wires, road blocks) with a dedicated high-priority bypass mode.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background: rgba(139, 92, 246, 0.15);">🤖</div>
+                <h3>Autonomous Escalation</h3>
+                <p>Issues not resolved within the SLA are automatically escalated to higher authorities, enforcing accountability.</p>
             </div>
         </div>
     </section>
@@ -99,5 +135,22 @@
     </footer>
 
     <script src="/static/js/app.js"></script>
+    <script>
+        // Fetch public stats for dashboard
+        async function fetchPublicStats() {
+            try {
+                const response = await fetch('/api/public/stats');
+                const data = await response.json();
+                document.getElementById('stat-total').innerText = data.total;
+                document.getElementById('stat-resolved').innerText = data.resolved;
+                document.getElementById('stat-rate').innerText = data.resolution_rate + '%';
+                document.getElementById('stat-active').innerText = data.active_now;
+            } catch (err) {
+                console.error('Error fetching stats:', err);
+            }
+        }
+        fetchPublicStats();
+        setInterval(fetchPublicStats, 30000); // Refresh every 30s
+    </script>
 </body>
 </html>

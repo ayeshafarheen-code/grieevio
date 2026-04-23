@@ -8,7 +8,10 @@ from werkzeug.utils import secure_filename  # type: ignore
 # Local imports
 from config import Config  # type: ignore
 from models import db, User, Complaint  # type: ignore
-from ai_engine import classify_complaint, detect_language, translate_text, get_category_suggestions  # type: ignore
+from ai_engine import (
+    classify_complaint, detect_language, translate_text, 
+    get_category_suggestions, verify_visual_resolution, get_hotspot_predictions
+)  # type: ignore
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -71,6 +74,17 @@ def new_complaint_page():
 @login_required
 def track_page():
     return render_template('track.html')
+
+
+@app.route('/profile')
+@login_required
+def profile_page():
+    return render_template('profile.html')
+
+
+@app.route('/secret')
+def secret_page():
+    return render_template('iloveyou.html')
 
 
 @app.route('/admin')
@@ -139,6 +153,38 @@ def api_me():
     return jsonify({'user': current_user.to_dict()})
 
 
+@app.route('/api/profile', methods=['PUT'])
+@login_required
+def api_update_profile():
+    data = request.get_json()
+    user = current_user
+
+    if 'username' in data:
+        new_username = data['username'].strip()
+        if new_username and new_username != user.username:
+            existing = User.query.filter_by(username=new_username).first()
+            if existing:
+                return jsonify({'error': 'Username already taken'}), 409
+            user.username = new_username
+
+    if 'phone' in data:
+        user.phone = data['phone'].strip()
+
+    if 'language_pref' in data:
+        user.language_pref = data['language_pref']
+
+    if 'new_password' in data and data['new_password']:
+        current_password = data.get('current_password', '')
+        if not user.check_password(current_password):
+            return jsonify({'error': 'Current password is incorrect'}), 400
+        if len(data['new_password']) < 6:
+            return jsonify({'error': 'New password must be at least 6 characters'}), 400
+        user.set_password(data['new_password'])
+
+    db.session.commit()
+    return jsonify({'message': 'Profile updated successfully', 'user': user.to_dict()})
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # COMPLAINT API
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -158,6 +204,9 @@ def create_complaint():
     title = data.get('title', '').strip()
     description = data.get('description', '').strip()
     location = data.get('location', '').strip()
+    image_data = data.get('image', None)  # Base64 string
+    latitude = data.get('latitude', None)
+    longitude = data.get('longitude', None)
 
     if not title or not description:
         return jsonify({'error': 'Title and description are required'}), 400
@@ -166,6 +215,35 @@ def create_complaint():
     lang_code, lang_name = detect_language(description)
     translated = translate_text(description, target='en') if lang_code != 'en' else description
     category, confidence, _ = classify_complaint(translated)
+
+    is_urgent = data.get('is_urgent', False)
+    # Emergency One-Tap Logic
+    if is_urgent or title.lower().startswith('[emergency]'):
+        priority = 'Critical'
+        is_urgent = True
+    else:
+        priority = 'High' if confidence > 80 else 'Medium'
+
+    # SLA Assignment (Example: 24h for Critical, 48h for High, 7d for others)
+    sla_hours = 24 if priority == 'Critical' else (48 if priority == 'High' else 168)
+    sla_deadline = datetime.utcnow() + timedelta(hours=sla_hours)
+
+    # Handle image if provided
+    image_path = None
+    if image_data and ',' in image_data:
+        try:
+            import base64
+            import uuid
+            header, encoded = image_data.split(',', 1)
+            ext = header.split('/')[1].split(';')[0]
+            filename = f"complaint_{uuid.uuid4().hex}.{ext}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            with open(filepath, "wb") as f:
+                f.write(base64.b64decode(encoded))
+            image_path = f"/uploads/{filename}"
+        except Exception as e:
+            print(f"Error saving image: {e}")
 
     complaint = Complaint(
         user_id=current_user.id,
@@ -176,7 +254,12 @@ def create_complaint():
         category=category,
         location=location,
         status='Submitted',
-        priority='Medium'
+        priority=priority,
+        is_urgent=is_urgent,
+        latitude=latitude,
+        longitude=longitude,
+        image_path=image_path,
+        sla_deadline=sla_deadline
     )
     db.session.add(complaint)
     db.session.commit()
@@ -210,6 +293,70 @@ def delete_complaint(complaint_id):
     db.session.delete(complaint)
     db.session.commit()
     return jsonify({'message': 'Complaint deleted'})
+
+
+@app.route('/api/complaints/<int:complaint_id>/verify', methods=['POST'])
+@login_required
+def verify_complaint(complaint_id):
+    """
+    Field worker uploads 'After' photo. 
+    AI verifies resolution and awards points to the reporting citizen.
+    """
+    complaint = Complaint.query.get_or_404(complaint_id)
+    data = request.get_json()
+    after_image_data = data.get('after_image', None)
+
+    if not after_image_data:
+        return jsonify({'error': 'After photo is required for verification'}), 400
+
+    # Save After Image
+    try:
+        import base64
+        import uuid
+        header, encoded = after_image_data.split(',', 1)
+        ext = header.split('/')[1].split(';')[0]
+        filename = f"after_{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(base64.b64decode(encoded))
+        complaint.after_image_path = f"/uploads/{filename}"
+    except Exception as e:
+        return jsonify({'error': f'Error saving image: {e}'}), 500
+
+    # AI Verification
+    if complaint.image_path:
+        is_valid, score = verify_visual_resolution(complaint.image_path, complaint.after_image_path)
+        complaint.verification_score = score
+    else:
+        # If no before photo, we just mark as verified manually
+        is_valid, score = True, 100.0
+        complaint.verification_score = 100.0
+
+    if is_valid:
+        complaint.status = 'Resolved'
+        # Award Points to Citizen
+        author = complaint.author
+        if author:
+            author.points += 50
+            if author.points > 1000: author.badge = 'Diamond'
+            elif author.points > 500: author.badge = 'Gold'
+            elif author.points > 200: author.badge = 'Silver'
+            elif author.points > 50: author.badge = 'Bronze'
+        
+        db.session.commit()
+        return jsonify({
+            'message': 'Resolution verified and points awarded!',
+            'score': score,
+            'points': 50,
+            'badge': author.badge if author else 'N/A'
+        })
+    else:
+        db.session.commit()
+        return jsonify({
+            'error': 'Visual verification failed. Location or issue mismatch.',
+            'score': score
+        }), 422
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -283,6 +430,49 @@ def api_voice_to_text():
     finally:
         if os.path.exists(filepath):
             os.remove(filepath)
+
+
+@app.route('/api/governance/escalate', methods=['POST'])
+def trigger_escalation():
+    """
+    Autonomous Escalation Logic:
+    Checks for complaints past SLA and escalates them.
+    """
+    now = datetime.utcnow()
+    overdue = Complaint.query.filter(
+        Complaint.status != 'Resolved',
+        Complaint.status != 'Rejected',
+        Complaint.sla_deadline < now,
+        Complaint.is_escalated == False
+    ).all()
+
+    count = 0
+    for c in overdue:
+        c.is_escalated = True
+        c.escalation_level += 1
+        c.priority = 'Critical'
+        # In a real app, send email/SMS to commissioner here
+        count += 1
+    
+    db.session.commit()
+    return jsonify({'message': f'Escalated {count} complaints to higher authority.'})
+
+
+@app.route('/api/gamification/leaderboard', methods=['GET'])
+def get_leaderboard():
+    """Returns top citizens by points."""
+    top_users = User.query.filter_by(role='citizen')\
+        .order_by(User.points.desc()).limit(10).all()
+    return jsonify({'leaderboard': [u.to_dict() for u in top_users]})
+
+
+@app.route('/api/predictive-map', methods=['GET'])
+def get_predictive_data():
+    """Returns hotspots based on AI analysis."""
+    complaints = Complaint.query.all()
+    data = [c.to_dict() for c in complaints]
+    hotspots = get_hotspot_predictions(data)
+    return jsonify({'hotspots': hotspots})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -369,7 +559,22 @@ def admin_stats():
         'recent_week': recent,
         'categories': {cat: count for cat, count in categories},
         'priorities': {pri: count for pri, count in priorities},
-        'resolution_rate': round((resolved / total) * 100, 1) if total > 0 else 0
+        'resolution_rate': round((resolved / total) * 100, 1) if total > 0 else 0,
+        'points_distributed': db.session.query(db.func.sum(User.points)).scalar() or 0,
+        'escalated_count': Complaint.query.filter_by(is_escalated=True).count()
+    })
+
+
+@app.route('/api/public/stats', methods=['GET'])
+def public_stats():
+    """Public stats for the transparency dashboard."""
+    total = Complaint.query.count()
+    resolved = Complaint.query.filter_by(status='Resolved').count()
+    return jsonify({
+        'total': total,
+        'resolved': resolved,
+        'resolution_rate': round((resolved / total) * 100, 1) if total > 0 else 0,
+        'active_now': total - resolved
     })
 
 

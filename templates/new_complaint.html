@@ -21,6 +21,7 @@
                 <li><a href="/dashboard" class="nav-link">Dashboard</a></li>
                 <li><a href="/new-complaint" class="nav-link active">New Complaint</a></li>
                 <li><a href="/track" class="nav-link">Track</a></li>
+                <li><a href="/profile" class="nav-link">Profile</a></li>
                 <li><a href="#" class="nav-link" onclick="handleLogout()">Logout</a></li>
             </ul>
         </div>
@@ -31,70 +32,146 @@
             <div class="page-header" style="justify-content: center; text-align: center;">
                 <div>
                     <h1>📝 Submit a Complaint</h1>
-                    <p class="subtitle">Describe your issue using text or voice — our AI will classify and route it
-                        automatically</p>
+                    <p class="subtitle">Describe your issue using text or voice — our AI will classify and route it automatically</p>
                 </div>
             </div>
 
             <div class="form-card">
+                <!-- Emergency One-Tap Button -->
+                <button type="button" class="btn btn-emergency" onclick="triggerEmergency()">
+                    🚨 EMERGENCY ONE-TAP REPORT
+                </button>
+                <p style="text-align: center; font-size: 0.8rem; color: var(--accent-danger); margin: 0.5rem 0 1.5rem; font-weight: 600;">
+                    Use only for life-threatening issues (Fallen wires, major road blocks, etc.)
+                </p>
+
                 <!-- Input Mode Toggle -->
                 <div class="input-mode-toggle">
-                    <button class="mode-btn active" id="text-mode-btn" onclick="switchMode('text')">⌨️ Text
-                        Input</button>
+                    <button class="mode-btn active" id="text-mode-btn" onclick="switchMode('text')">⌨️ Text Input</button>
                     <button class="mode-btn" id="voice-mode-btn" onclick="switchMode('voice')">🎙️ Voice Input</button>
                 </div>
 
                 <!-- Voice Input Area (hidden by default) -->
                 <div class="voice-area" id="voice-area" style="display: none;">
-                    <button class="voice-btn" id="voice-record-btn" onclick="toggleVoice()">🎤</button>
-                    <div class="voice-status" id="voice-status">Click the microphone to start recording</div>
-                    <div style="margin-top: 1rem;">
+                    <div class="voice-steps">
+                        <div class="voice-step active" id="voice-step-1-indicator">
+                            <div class="voice-step-number">1</div>
+                            <span>Title</span>
+                        </div>
+                        <div class="voice-step-line" id="voice-step-line"></div>
+                        <div class="voice-step" id="voice-step-2-indicator">
+                            <div class="voice-step-number">2</div>
+                            <span>Description</span>
+                        </div>
+                    </div>
+
+                    <div id="voice-step-1" class="voice-step-content">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">🏷️ Step 1: Speak your complaint title</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Give a brief, clear title for your complaint</p>
+                        <button class="voice-btn" id="voice-record-btn-1" onclick="toggleVoiceStep(1)">🎤</button>
+                        <div class="voice-status" id="voice-status-1">Click the mic to record the title</div>
+                        <div class="voice-preview" id="voice-preview-1" style="display: none;">
+                            <label style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Captured Title:</label>
+                            <p id="voice-preview-text-1" style="color: var(--accent-primary-light); font-weight: 600; margin-top: 0.25rem;"></p>
+                        </div>
+                    </div>
+
+                    <div id="voice-step-2" class="voice-step-content" style="display: none;">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">📝 Step 2: Describe the complaint</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Explain the issue in detail — speak as much as you want</p>
+                        <button class="voice-btn" id="voice-record-btn-2" onclick="toggleVoiceStep(2)">🎤</button>
+                        <div class="voice-status" id="voice-status-2">Click the mic to record the description</div>
+                        <div class="voice-preview" id="voice-preview-2" style="display: none;">
+                            <label style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Captured Description:</label>
+                            <p id="voice-preview-text-2" style="color: var(--accent-primary-light); font-size: 0.9rem; margin-top: 0.25rem; line-height: 1.5;"></p>
+                        </div>
+                    </div>
+
+                    <div class="voice-nav" id="voice-nav">
+                        <button class="btn btn-secondary btn-sm" id="voice-back-btn" onclick="voiceGoBack()" style="display: none;">← Back</button>
+                        <button class="btn btn-primary btn-sm" id="voice-next-btn" onclick="voiceGoNext()">Next: Description →</button>
+                    </div>
+
+                    <div style="margin-top: 1.25rem;">
                         <label style="font-size: 0.85rem; color: var(--text-secondary);">Voice Language:</label>
-                        <select id="voice-language" class="admin-select" style="margin-left: 0.5rem;"
-                            onchange="changeVoiceLang()">
+                        <select id="voice-language" class="admin-select" style="margin-left: 0.5rem;" onchange="changeVoiceLang()">
                             <option value="en">English</option>
-                            <option value="hi">Hindi</option>
-                            <option value="ta">Tamil</option>
-                            <option value="te">Telugu</option>
-                            <option value="kn">Kannada</option>
-                            <option value="ml">Malayalam</option>
-                            <option value="mr">Marathi</option>
-                            <option value="bn">Bengali</option>
-                            <option value="gu">Gujarati</option>
-                            <option value="pa">Punjabi</option>
-                            <option value="ur">Urdu</option>
+                            <option value="hi">हिंदी</option>
+                            <option value="ta">தமிழ்</option>
+                            <option value="te">తెలుగు</option>
+                            <option value="kn">ಕನ್ನಡ</option>
+                            <option value="ml">മലയാളം</option>
+                            <option value="mr">मराठी</option>
+                            <option value="bn">বাংলা</option>
+                            <option value="gu">ગુજરાતી</option>
+                            <option value="pa">ਪੰਜਾਬੀ</option>
+                            <option value="ur">اردو</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Image Capture Area -->
+                <div class="image-capture-area" style="margin-top: 1.5rem; border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">📸 Capture Evidence (Optional)</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Add a photo of the issue — we'll automatically geo-tag it</p>
+                    
+                    <div id="camera-container" style="display: none; position: relative; max-width: 400px; margin: 0 auto; border-radius: var(--radius-md); overflow: hidden; background: #000; box-shadow: var(--shadow-lg);">
+                        <video id="camera-video" width="100%" height="auto" autoplay playsinline style="display: block;"></video>
+                        <canvas id="camera-canvas" style="display: none;"></canvas>
+                        <div class="camera-controls" style="position: absolute; bottom: 15px; left: 0; right: 0; display: flex; justify-content: center; gap: 1rem;">
+                            <button class="btn btn-primary btn-icon" onclick="capturePhoto()" title="Take Photo">📸</button>
+                            <button class="btn btn-secondary btn-icon" onclick="stopCamera()" title="Close Camera">❌</button>
+                        </div>
+                    </div>
+
+                    <div id="image-preview-container" style="display: none; max-width: 400px; margin: 0 auto; text-align: center;">
+                        <div style="position: relative; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);">
+                            <img id="image-preview" src="" style="width: 100%; display: block;">
+                            <button class="btn btn-danger btn-icon" onclick="clearPhoto()" style="position: absolute; top: 10px; right: 10px;">🗑️</button>
+                        </div>
+                        <div id="geo-tag-status" style="margin-top: 0.75rem; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <span id="geo-icon">📍</span> <span id="geo-text">Getting location...</span>
+                        </div>
+                    </div>
+
+                    <div id="capture-placeholder" style="text-align: center; padding: 2rem; border: 2px dashed var(--border-glass); border-radius: var(--radius-md); background: rgba(255,255,255,0.02);">
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <button type="button" class="btn btn-secondary" onclick="startCamera()">📷 Open Camera</button>
+                            <label class="btn btn-secondary" style="cursor: pointer;">
+                                📁 Upload Photo
+                                <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
+                            </label>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted);">Supports GPS geo-tagging</p>
                     </div>
                 </div>
 
                 <form id="complaint-form" onsubmit="handleSubmitComplaint(event)">
                     <div class="form-group">
                         <label for="complaint-title">Complaint Title</label>
-                        <input type="text" id="complaint-title" class="form-control"
-                            placeholder="Brief title of your issue" required>
+                        <input type="text" id="complaint-title" class="form-control" placeholder="Brief title of your issue" required>
                     </div>
 
                     <div class="form-group">
                         <label for="complaint-desc">Description</label>
-                        <textarea id="complaint-desc" class="form-control" placeholder="Describe the issue in detail..."
-                            required oninput="onDescriptionChange()"></textarea>
+                        <textarea id="complaint-desc" class="form-control" placeholder="Describe the issue in detail..." required oninput="onDescriptionChange()"></textarea>
                         <span class="language-indicator" id="language-indicator" style="display: none;"></span>
                     </div>
 
-                    <!-- AI Suggestion (appears dynamically) -->
-                    <div class="ai-suggestion" id="ai-suggestion" style="display: none;"></div>
-
                     <div class="form-group">
                         <label for="complaint-location">Location</label>
-                        <input type="text" id="complaint-location" class="form-control"
-                            placeholder="e.g., Main Street, Sector 15, Near Bus Stop">
+                        <input type="text" id="complaint-location" class="form-control" placeholder="e.g., Main Street, Sector 15, Near Bus Stop">
+                    </div>
+
+                    <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                        <input type="checkbox" id="complaint-urgent" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="complaint-urgent" style="margin-bottom: 0; cursor: pointer; color: var(--accent-danger); font-weight: 600;">⚠️ This is an Urgent / High Severity issue</label>
                     </div>
 
                     <!-- AI Result (shown after submission) -->
                     <div class="ai-suggestion" id="ai-result" style="display: none;"></div>
 
-                    <button type="submit" class="btn btn-primary"
-                        style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
                         📩 Submit Complaint
                     </button>
                 </form>
@@ -110,35 +187,225 @@
     <script src="/static/js/voice.js"></script>
     <script src="/static/js/complaints.js"></script>
     <script>
-        let voiceInput;
+        let voiceTitle = null;
+        let voiceDesc = null;
+        let currentVoiceStep = 1;
 
         function switchMode(mode) {
             document.getElementById('text-mode-btn').classList.toggle('active', mode === 'text');
             document.getElementById('voice-mode-btn').classList.toggle('active', mode === 'voice');
             document.getElementById('voice-area').style.display = mode === 'voice' ? 'block' : 'none';
 
-            if (mode === 'voice' && !voiceInput) {
-                voiceInput = new VoiceInput({
-                    targetInput: document.getElementById('complaint-desc'),
-                    statusElement: document.getElementById('voice-status'),
-                    onResult: function (text, isFinal) {
-                        if (isFinal) onDescriptionChange();
-                    }
-                });
+            if (mode === 'voice') {
+                if (!voiceTitle) {
+                    voiceTitle = new VoiceInput({
+                        targetInput: document.getElementById('complaint-title'),
+                        statusElement: document.getElementById('voice-status-1'),
+                        onResult: function (text, isFinal) {
+                            if (isFinal || text) {
+                                document.getElementById('voice-preview-1').style.display = 'block';
+                                document.getElementById('voice-preview-text-1').textContent = text;
+                            }
+                        }
+                    });
+                }
+                if (!voiceDesc) {
+                    voiceDesc = new VoiceInput({
+                        targetInput: document.getElementById('complaint-desc'),
+                        statusElement: document.getElementById('voice-status-2'),
+                        onResult: function (text, isFinal) {
+                            if (isFinal || text) {
+                                document.getElementById('voice-preview-2').style.display = 'block';
+                                document.getElementById('voice-preview-text-2').textContent = text;
+                            }
+                            if (isFinal) onDescriptionChange();
+                        }
+                    });
+                }
+                showVoiceStep(1);
+            } else {
+                if (voiceTitle) voiceTitle.stop();
+                if (voiceDesc) voiceDesc.stop();
+                resetRecordButtons();
             }
         }
 
-        function toggleVoice() {
-            if (!voiceInput) return;
-            const btn = document.getElementById('voice-record-btn');
-            const recording = voiceInput.toggle();
+        function showVoiceStep(step) {
+            currentVoiceStep = step;
+            document.getElementById('voice-step-1').style.display = step === 1 ? 'block' : 'none';
+            document.getElementById('voice-step-2').style.display = step === 2 ? 'block' : 'none';
+
+            const s1 = document.getElementById('voice-step-1-indicator');
+            const s2 = document.getElementById('voice-step-2-indicator');
+            const line = document.getElementById('voice-step-line');
+
+            s1.classList.toggle('active', step === 1);
+            s1.classList.toggle('completed', step > 1);
+            s2.classList.toggle('active', step === 2);
+            line.classList.toggle('completed', step > 1);
+
+            document.getElementById('voice-back-btn').style.display = step > 1 ? 'inline-flex' : 'none';
+            document.getElementById('voice-next-btn').textContent = step === 1 ? 'Next: Description →' : '✅ Done — Review Below';
+
+            if (voiceTitle) voiceTitle.stop();
+            if (voiceDesc) voiceDesc.stop();
+            resetRecordButtons();
+        }
+
+        function voiceGoNext() {
+            if (currentVoiceStep === 1) {
+                const title = document.getElementById('complaint-title').value.trim();
+                if (!title) { showToast('Please record or type a title first', 'error'); return; }
+                showVoiceStep(2);
+            } else {
+                const desc = document.getElementById('complaint-desc').value.trim();
+                if (!desc) { showToast('Please record or type a description first', 'error'); return; }
+                showToast('Voice input complete!', 'success');
+                document.getElementById('complaint-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function voiceGoBack() { if (currentVoiceStep === 2) showVoiceStep(1); }
+
+        function toggleVoiceStep(step) {
+            const voice = step === 1 ? voiceTitle : voiceDesc;
+            const btn = document.getElementById(`voice-record-btn-${step}`);
+            if (!voice) return;
+            const recording = voice.toggle();
             btn.classList.toggle('recording', recording);
             btn.textContent = recording ? '⏹️' : '🎤';
         }
 
+        function resetRecordButtons() {
+            ['voice-record-btn-1', 'voice-record-btn-2'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) { btn.classList.remove('recording'); btn.textContent = '🎤'; }
+            });
+        }
+
         function changeVoiceLang() {
-            if (voiceInput) {
-                voiceInput.setLanguage(document.getElementById('voice-language').value);
+            const lang = document.getElementById('voice-language').value;
+            if (voiceTitle) voiceTitle.setLanguage(lang);
+            if (voiceDesc) voiceDesc.setLanguage(lang);
+        }
+
+        // ─── Camera & Geo-tagging ────────────────────────────────────────────────
+        let cameraStream = null;
+        let capturedImage = null;
+        let latitude = null;
+        let longitude = null;
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                cameraStream = stream;
+                document.getElementById('camera-video').srcObject = stream;
+                document.getElementById('camera-container').style.display = 'block';
+                document.getElementById('capture-placeholder').style.display = 'none';
+                document.getElementById('image-preview-container').style.display = 'none';
+            } catch (err) {
+                showToast('Unable to access camera: ' + err.message, 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) { cameraStream.getTracks().forEach(track => track.stop()); cameraStream = null; }
+            document.getElementById('camera-container').style.display = 'none';
+            if (!capturedImage) document.getElementById('capture-placeholder').style.display = 'block';
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedImage = canvas.toDataURL('image/jpeg', 0.8);
+            showPreview(capturedImage);
+            stopCamera();
+            getGeoLocation();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { capturedImage = e.target.result; showPreview(capturedImage); getGeoLocation(); };
+            reader.readAsDataURL(file);
+        }
+
+        function showPreview(src) {
+            document.getElementById('image-preview').src = src;
+            document.getElementById('image-preview-container').style.display = 'block';
+            document.getElementById('capture-placeholder').style.display = 'none';
+            document.getElementById('camera-container').style.display = 'none';
+        }
+
+        function clearPhoto() {
+            capturedImage = null; latitude = null; longitude = null;
+            document.getElementById('image-preview-container').style.display = 'none';
+            document.getElementById('capture-placeholder').style.display = 'block';
+            document.getElementById('image-upload').value = '';
+        }
+
+        function getGeoLocation() {
+            const statusText = document.getElementById('geo-text');
+            const statusIcon = document.getElementById('geo-icon');
+            if (!navigator.geolocation) { statusText.textContent = 'Geo-tagging not supported'; statusIcon.textContent = '❌'; return; }
+            statusText.textContent = 'Geo-tagging...'; statusIcon.textContent = '🛰️';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    latitude = pos.coords.latitude; longitude = pos.coords.longitude;
+                    statusText.textContent = `Geo-tagged: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`; statusIcon.textContent = '✅';
+                },
+                (err) => { statusText.textContent = 'Location unavailable'; statusIcon.textContent = '⚠️'; },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        async function triggerEmergency() {
+            if (confirm("This will trigger an INSTANT alert to emergency responders for this location. Proceed?")) {
+                getGeoLocation(); // Ensure we have latest location
+                setTimeout(async () => {
+                    try {
+                        const payload = { 
+                            title: "[EMERGENCY] Urgent Public Safety Issue", 
+                            description: "Life-threatening issue reported via Emergency One-Tap. Instant priority escalation requested.", 
+                            is_urgent: true,
+                            latitude, 
+                            longitude 
+                        };
+                        const data = await apiCall('/api/complaints', 'POST', payload);
+                        showToast('EMERGENCY ALERT SENT!', 'error');
+                        setTimeout(() => window.location.href = '/dashboard', 1500);
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                    }
+                }, 1000);
+            }
+        }
+
+        async function handleSubmitComplaint(e) {
+            e.preventDefault();
+            const title = document.getElementById('complaint-title').value.trim();
+            const description = document.getElementById('complaint-desc').value.trim();
+            const location = document.getElementById('complaint-location').value.trim();
+            const is_urgent = document.getElementById('complaint-urgent')?.checked || false;
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Submitting...';
+
+            try {
+                const payload = { title, description, location, is_urgent, image: capturedImage, latitude, longitude };
+                const data = await apiCall('/api/complaints', 'POST', payload);
+                showToast('Complaint filed successfully!', 'success');
+                setTimeout(() => window.location.href = '/dashboard', 1500);
+            } catch (err) {
+                showToast(err.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📩 Submit Complaint';
             }
         }
     </script>

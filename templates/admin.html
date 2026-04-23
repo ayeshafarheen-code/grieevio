@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard – GRIEEVIO</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
@@ -20,6 +22,7 @@
             <a href="/" class="navbar-brand"><span class="brand-icon">⚡</span> GRIEEVIO</a>
             <ul class="navbar-nav">
                 <li><a href="/admin" class="nav-link active">🛡️ Admin Panel</a></li>
+                <li><a href="/profile" class="nav-link">Profile</a></li>
                 <li><a href="#" class="nav-link" onclick="handleLogout()">Logout</a></li>
             </ul>
         </div>
@@ -64,7 +67,23 @@
                 <div class="stat-icon green">📈</div>
                 <div class="stat-value" id="admin-rate">0%</div>
                 <div class="stat-label">Resolution Rate</div>
+            <div class="stat-card">
+                <div class="stat-icon red">📢</div>
+                <div class="stat-value" id="admin-escalated">0</div>
+                <div class="stat-label">SLA Escalations</div>
             </div>
+        </div>
+
+        <!-- Predictive Map Section -->
+        <div class="chart-card" style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>🗺️ AI Predictive Hotspot Map</h3>
+                <button class="btn btn-secondary btn-sm" onclick="triggerEscalationCheck()">🚀 Run SLA Escalation Check</button>
+            </div>
+            <div id="hotspot-map" style="height: 400px; border-radius: var(--radius-md); background: #000; border: 1px solid var(--border-glass);"></div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                AI analyzes historical complaint clusters to predict recurring issue locations.
+            </p>
         </div>
 
         <!-- Charts -->
@@ -110,6 +129,7 @@
                             <th>Status</th>
                             <th>Priority</th>
                             <th>Date</th>
+                            <th>Evidence</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -132,7 +152,57 @@
     <script src="/static/js/app.js"></script>
     <script src="/static/js/complaints.js"></script>
     <script src="/static/js/admin.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', loadAdminDashboard);</script>
+    <script>
+        let map;
+        async function loadAdminDashboardExtended() {
+            if (typeof loadAdminDashboard === 'function') await loadAdminDashboard();
+            
+            // Initialize Map
+            if (!map) {
+                map = L.map('hotspot-map').setView([20.5937, 78.9629], 5); // Center on India
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+            }
+
+            // Fetch additional stats
+            try {
+                const stats = await apiCall('/api/admin/stats');
+                document.getElementById('admin-escalated').innerText = stats.escalated_count;
+
+                // Fetch Hotspots
+                const hotspots = await apiCall('/api/predictive-map');
+                hotspots.hotspots.forEach(h => {
+                    const color = h.risk_level === 'High' ? 'red' : 'orange';
+                    L.circle([h.lat, h.lng], {
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.5,
+                        radius: 500
+                    }).addTo(map).bindPopup(`<b>${h.category} Hotspot</b><br>${h.prediction}`);
+                });
+                
+                if (hotspots.hotspots.length > 0) {
+                    const first = hotspots.hotspots[0];
+                    map.setView([first.lat, first.lng], 13);
+                }
+            } catch (err) {
+                console.error('Error loading extended stats:', err);
+            }
+        }
+
+        async function triggerEscalationCheck() {
+            try {
+                const res = await apiCall('/api/governance/escalate', 'POST');
+                showToast(res.message, 'info');
+                loadAdminDashboardExtended();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAdminDashboardExtended);
+    </script>
 </body>
 
 </html>

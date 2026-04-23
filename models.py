@@ -16,6 +16,8 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default='citizen')  # citizen / admin
     language_pref = db.Column(db.String(10), default='en')
     phone = db.Column(db.String(20), nullable=True)
+    points = db.Column(db.Integer, default=0)
+    badge = db.Column(db.String(50), default='Citizen')  # Citizen, Bronze, Silver, Gold, Diamond
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     complaints = db.relationship('Complaint', backref='author', lazy=True)
@@ -34,6 +36,8 @@ class User(UserMixin, db.Model):
             'role': self.role,
             'language_pref': self.language_pref,
             'phone': self.phone,
+            'points': self.points,
+            'badge': self.badge,
             'created_at': self.created_at.isoformat()
         }
 
@@ -54,6 +58,14 @@ class Complaint(db.Model):
     image_path = db.Column(db.String(300), nullable=True)
     admin_notes = db.Column(db.Text, nullable=True)
     assigned_to = db.Column(db.String(100), nullable=True)
+    is_urgent = db.Column(db.Boolean, default=False)
+    after_image_path = db.Column(db.String(300), nullable=True)
+    verification_score = db.Column(db.Float, default=0.0)
+    is_escalated = db.Column(db.Boolean, default=False)
+    escalation_level = db.Column(db.Integer, default=0)
+    sla_deadline = db.Column(db.DateTime, nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -69,6 +81,14 @@ class Complaint(db.Model):
             'category': self.category,
             'status': self.status,
             'priority': self.priority,
+            'is_urgent': self.is_urgent,
+            'after_image_path': self.after_image_path,
+            'verification_score': self.verification_score,
+            'is_escalated': self.is_escalated,
+            'escalation_level': self.escalation_level,
+            'sla_deadline': self.sla_deadline.isoformat() if self.sla_deadline else None,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
             'location': self.location,
             'image_path': self.image_path,
             'admin_notes': self.admin_notes,

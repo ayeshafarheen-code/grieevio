@@ -22,6 +22,7 @@
                 <li><a href="/dashboard" class="nav-link active">Dashboard</a></li>
                 <li><a href="/new-complaint" class="nav-link">New Complaint</a></li>
                 <li><a href="/track" class="nav-link">Track</a></li>
+                <li><a href="/profile" class="nav-link">Profile</a></li>
                 <li><a href="#" class="nav-link" onclick="handleLogout()">Logout</a></li>
             </ul>
         </div>
@@ -58,6 +59,12 @@
                 <div class="stat-value" id="stat-resolved">0</div>
                 <div class="stat-label">Resolved</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">🏆</div>
+                <div class="stat-value" id="stat-points">0</div>
+                <div class="stat-label">Civic Points</div>
+                <div id="user-badge" class="badge-hero"></div>
+            </div>
         </div>
 
         <!-- Complaints List -->
@@ -85,7 +92,27 @@
 
     <script src="/static/js/app.js"></script>
     <script src="/static/js/complaints.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', loadDashboard);</script>
+    <script>
+        async function loadDashboardExtended() {
+            try {
+                // Fetch user data for points and badge
+                const userRes = await fetch('/api/me');
+                const userData = await userRes.json();
+                const user = userData.user;
+                
+                document.getElementById('stat-points').innerText = user.points;
+                const badgeEl = document.getElementById('user-badge');
+                badgeEl.innerText = user.badge;
+                badgeEl.className = 'badge-hero badge-' + user.badge.toLowerCase();
+
+                // Call existing complaints loader
+                if (typeof loadDashboard === 'function') loadDashboard();
+            } catch (err) {
+                console.error('Error loading dashboard:', err);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadDashboardExtended);
+    </script>
 </body>
 
 </html>

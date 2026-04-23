@@ -11,7 +11,7 @@
         {
             "root": ".",
             "extraPaths": [
-                ".",
+                "d:/project",
                 "C:/Users/Ayesha Farheen/AppData/Local/Programs/Python/Python312/Lib/site-packages"
             ]
         }

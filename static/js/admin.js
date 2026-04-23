@@ -67,7 +67,7 @@ async function loadAdminComplaints(status = '', category = '') {
         const complaints = data.complaints;
 
         if (complaints.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 3rem; color: var(--text-muted);">No complaints found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 3rem; color: var(--text-muted);">No complaints found</td></tr>`;
             return;
         }
 
@@ -76,7 +76,10 @@ async function loadAdminComplaints(status = '', category = '') {
                 <td><strong>#${c.id}</strong></td>
                 <td>
                     <div style="max-width: 200px;">
-                        <strong style="display:block; margin-bottom:2px;">${escapeHtml(c.title)}</strong>
+                        <strong style="display:block; margin-bottom:2px;">
+                            ${escapeHtml(c.title)}
+                            ${c.is_urgent ? '<span class="badge badge-danger" style="font-size: 0.6rem; vertical-align: middle; margin-left: 5px;">URGENT</span>' : ''}
+                        </strong>
                         <span style="color: var(--text-muted); font-size: 0.78rem;">by ${escapeHtml(c.username)}</span>
                     </div>
                 </td>
@@ -96,9 +99,19 @@ async function loadAdminComplaints(status = '', category = '') {
                     </select>
                 </td>
                 <td style="color: var(--text-muted); font-size: 0.85rem;">${formatDate(c.created_at)}</td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        ${c.image_path ? `<img src="${c.image_path}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="window.open('${c.image_path}')">` : '<span style="color: var(--text-muted); font-size: 0.75rem;">None</span>'}
+                        ${(c.latitude && c.longitude) ? `<span title="Geo-tagged: ${c.latitude}, ${c.longitude}" style="cursor:help;">📍</span>` : ''}
+                        ${c.is_escalated ? `<span title="Escalated ${c.escalation_level}x" style="cursor:help;">⚠️ Escalated</span>` : ''}
+                    </div>
+                    ${c.sla_deadline ? `<div style="font-size: 0.7rem; color: var(--text-danger); margin-top: 4px;">SLA: ${formatDate(c.sla_deadline)}</div>` : ''}
+                </td>
                 <td class="actions-cell">
-                    <button class="btn btn-sm btn-secondary" onclick="viewComplaint(${c.id})">👁️</button>
-                    <button class="btn btn-sm btn-primary" onclick="openNotesModal(${c.id}, '${escapeHtml(c.admin_notes || '')}')">📝</button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewComplaint(${c.id})" title="View Details">👁️</button>
+                    ${c.status === 'In Progress' ? `<button class="btn btn-sm btn-success" onclick="openVerifyModal(${c.id})" title="AI Verify & Resolve">✅ Verify</button>` : ''}
+                    <button class="btn btn-sm btn-primary" onclick="openNotesModal(${c.id}, '${escapeHtml(c.admin_notes || '')}')" title="Edit Notes">📝</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteComplaint(${c.id})" title="Delete Complaint">🗑️</button>
                 </td>
             </tr>
         `).join('');
@@ -159,5 +172,85 @@ function adminFilter(type, value) {
         loadAdminComplaints(value, '');
     } else {
         loadAdminComplaints('', value);
+    }
+}
+
+// ─── Delete Complaint ──────────────────────────────────────────────────────
+async function deleteComplaint(id) {
+    if (!confirm('CRITICAL: Are you sure you want to delete this complaint? This action cannot be undone.')) return;
+
+    try {
+        await apiCall(`/api/complaints/${id}`, 'DELETE');
+        showToast('Complaint deleted successfully', 'success');
+        loadAdminComplaints();
+        loadAdminStats();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ─── AI Verification Modal ──────────────────────────────────────────────────
+function openVerifyModal(id) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+        <div class="modal">
+            <h3>✅ AI Visual Verification - Complaint #${id}</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                Upload the "After" photo. AI will compare it with the "Before" photo to verify the fix.
+            </p>
+            <div class="form-group">
+                <label>Upload 'After' Evidence</label>
+                <input type="file" id="verify-file" class="form-control" accept="image/*" onchange="previewVerifyImage(event)">
+            </div>
+            <div id="verify-preview-container" style="display:none; margin-bottom: 1.5rem; text-align: center;">
+                <img id="verify-preview-img" style="max-width: 100%; border-radius: 8px; border: 1px solid var(--border-glass);">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button class="btn btn-primary" id="verify-submit-btn" onclick="submitAIVerification(${id})">🤖 AI Verify & Resolve</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+let verifyImageBase64 = null;
+function previewVerifyImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        verifyImageBase64 = e.target.result;
+        const img = document.getElementById('verify-preview-img');
+        if (img) {
+            img.src = verifyImageBase64;
+            document.getElementById('verify-preview-container').style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+async function submitAIVerification(id) {
+    if (!verifyImageBase64) { showToast('Please upload an after photo first', 'error'); return; }
+    
+    const btn = document.getElementById('verify-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '🤖 Analyzing...';
+
+    try {
+        const res = await apiCall(`/api/complaints/${id}/verify`, 'POST', { after_image: verifyImageBase64 });
+        showToast(`Verified! AI Match Score: ${res.score}%`, 'success');
+        document.querySelector('.modal-overlay').remove();
+        if (typeof loadAdminDashboardExtended === 'function') {
+            loadAdminDashboardExtended();
+        } else {
+            loadAdminDashboard();
+        }
+    } catch (err) {
+        showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '🤖 AI Verify & Resolve';
     }
 }

@@ -154,8 +154,10 @@ async function handleSubmitComplaint(e) {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Processing with AI...';
 
+    const is_urgent = document.getElementById('complaint-urgent')?.checked || false;
+
     try {
-        const data = await apiCall('/api/complaints', 'POST', { title, description, location });
+        const data = await apiCall('/api/complaints', 'POST', { title, description, location, is_urgent });
         const ai = data.ai_info;
 
         showToast(`Complaint filed! Category: ${ai.category} (${ai.confidence}% confidence)`, 'success');
@@ -289,4 +291,16 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+// ─── Delete Complaint ──────────────────────────────────────────────────────
+async function deleteComplaint(id) {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+
+    try {
+        await apiCall(`/api/complaints/${id}`, 'DELETE');
+        showToast('Complaint deleted', 'success');
+        loadDashboard();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
 }
