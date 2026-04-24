@@ -11,12 +11,13 @@
         {
             "root": ".",
             "extraPaths": [
-                "d:/project",
-                "C:/Users/Ayesha Farheen/AppData/Local/Programs/Python/Python312/Lib/site-packages"
+                "./"
             ]
         }
     ],
     "typeCheckingMode": "basic",
     "pythonVersion": "3.12",
-    "pythonPlatform": "Windows"
+    "pythonPlatform": "Windows",
+    "reportMissingImports": true,
+    "reportMissingTypeStubs": false
 }

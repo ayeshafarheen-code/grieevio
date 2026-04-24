@@ -10,7 +10,7 @@ else:
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'grieevio-secret-key-2026')
     
-    # Database Configuration - supporting all possible Vercel Postgres variable names
+    # Database Configuration
     database_url = (
         os.environ.get('POSTGRES_URL') or 
         os.environ.get('POSTGRES_URL_NON_POOLING') or
@@ -18,11 +18,13 @@ class Config:
     )
     
     if database_url:
-        # Fix protocol for SQLAlchemy
+        # Use pure-python pg8000 driver for Vercel stability
         if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
+            database_url = database_url.replace("postgres://", "postgresql+pg8000://", 1)
+        elif database_url.startswith("postgresql://"):
+            database_url = database_url.replace("postgresql://", "postgresql+pg8000://", 1)
         
-        # Ensure SSL mode for Neon
+        # Ensure SSL mode
         if "sslmode" not in database_url:
             separator = "&" if "?" in database_url else "?"
             database_url += f"{separator}sslmode=require"
