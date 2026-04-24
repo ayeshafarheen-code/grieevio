@@ -8,6 +8,10 @@ from werkzeug.utils import secure_filename  # type: ignore
 # Local imports
 from config import Config  # type: ignore
 from models import db, User, Complaint  # type: ignore
+from ai_engine import (
+    classify_complaint, detect_language, translate_text, 
+    get_category_suggestions, verify_visual_resolution, get_hotspot_predictions
+)  # type: ignore
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -26,22 +30,14 @@ def load_user(user_id):
     except Exception:
         return None
 
-# Database and directory initialization
-def init_backend():
-    if getattr(app, '_got_first_request', False):
-        return
-    try:
-        with app.app_context():
-            db.create_all()
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        app._got_first_request = True
-    except Exception as e:
-        app.logger.error(f"Initialization error: {e}")
-
-@app.before_request
-def startup():
-    init_backend()
+# Create tables and directories on startup
+try:
+    with app.app_context():
+        db.create_all()
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except Exception as e:
+    app.logger.error(f"Startup warning: {e}")
 
 @app.route('/api/health')
 def health_check():
@@ -235,7 +231,6 @@ def create_complaint():
         return jsonify({'error': 'Title and description are required'}), 400
 
     # AI Processing
-    from ai_engine import detect_language, translate_text, classify_complaint
     lang_code, lang_name = detect_language(description)
     translated = translate_text(description, target='en') if lang_code != 'en' else description
     category, confidence, _ = classify_complaint(translated)
@@ -350,7 +345,6 @@ def verify_complaint(complaint_id):
 
     # AI Verification
     if complaint.image_path:
-        from ai_engine import verify_visual_resolution
         is_valid, score = verify_visual_resolution(complaint.image_path, complaint.after_image_path)
         complaint.verification_score = score
     else:
@@ -390,7 +384,6 @@ def verify_complaint(complaint_id):
 
 @app.route('/api/classify', methods=['POST'])
 def api_classify():
-    from ai_engine import classify_complaint, get_category_suggestions
     data = request.get_json()
     text = data.get('text', '')
     category, confidence, scores = classify_complaint(text)
@@ -404,7 +397,6 @@ def api_classify():
 
 @app.route('/api/detect-language', methods=['POST'])
 def api_detect_language():
-    from ai_engine import detect_language
     data = request.get_json()
     text = data.get('text', '')
     lang_code, lang_name = detect_language(text)
@@ -413,7 +405,6 @@ def api_detect_language():
 
 @app.route('/api/translate', methods=['POST'])
 def api_translate():
-    from ai_engine import translate_text
     data = request.get_json()
     text = data.get('text', '')
     target = data.get('target', 'en')
@@ -497,7 +488,6 @@ def get_leaderboard():
 @app.route('/api/predictive-map', methods=['GET'])
 def get_predictive_data():
     """Returns hotspots based on AI analysis."""
-    from ai_engine import get_hotspot_predictions
     complaints = Complaint.query.all()
     data = [c.to_dict() for c in complaints]
     hotspots = get_hotspot_predictions(data)

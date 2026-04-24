@@ -1,6 +1,6 @@
 import os
 
-# Handle Vercel's read-only filesystem
+# Handle Vercel's read-only filesystem (fallback for future serverless deployments)
 if os.environ.get('VERCEL'):
     BASE_DIR = '/tmp'
 else:
@@ -10,30 +10,9 @@ else:
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'grieevio-secret-key-2026')
     
-    # Database Configuration
-    database_url = (
-        os.environ.get('POSTGRES_URL') or 
-        os.environ.get('POSTGRES_URL_NON_POOLING') or
-        os.environ.get('DATABASE_URL')
-    )
-    
-    if database_url:
-        # Use pure-python pg8000 driver for Vercel stability
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql+pg8000://", 1)
-        elif database_url.startswith("postgresql://"):
-            database_url = database_url.replace("postgresql://", "postgresql+pg8000://", 1)
-        
-        # Ensure SSL mode
-        if "sslmode" not in database_url:
-            separator = "&" if "?" in database_url else "?"
-            database_url += f"{separator}sslmode=require"
-            
-        SQLALCHEMY_DATABASE_URI = database_url
-    else:
-        # Fallback to local SQLite
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db')
-        
+    # Standard SQLite Database (Local)
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload

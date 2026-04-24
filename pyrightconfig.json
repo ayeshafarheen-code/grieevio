@@ -18,6 +18,6 @@
     "typeCheckingMode": "basic",
     "pythonVersion": "3.12",
     "pythonPlatform": "Windows",
-    "reportMissingImports": true,
+    "reportMissingImports": "warning",
     "reportMissingTypeStubs": false
 }
