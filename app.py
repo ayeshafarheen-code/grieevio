@@ -32,16 +32,20 @@ def load_user(user_id):
 
 # Database and directory initialization
 def init_backend():
+    if getattr(app, '_got_first_request', False):
+        return
     try:
         with app.app_context():
             db.create_all()
             if not os.path.exists(app.config['UPLOAD_FOLDER']):
                 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        app._got_first_request = True
     except Exception as e:
         app.logger.error(f"Initialization error: {e}")
 
-# Run initialization once on startup
-init_backend()
+@app.before_request
+def startup():
+    init_backend()
 
 @app.route('/api/health')
 def health_check():
