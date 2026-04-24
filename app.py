@@ -23,20 +23,33 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login_page'
 
-
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return User.query.get(int(user_id))
+    except Exception:
+        return None
 
+# Database and directory initialization
+def init_backend():
+    try:
+        with app.app_context():
+            db.create_all()
+            if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except Exception as e:
+        app.logger.error(f"Initialization error: {e}")
 
-# Create tables and directories on startup
-try:
-    with app.app_context():
-        db.create_all()
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'])
-except Exception as e:
-    print(f"Startup warning: {e}")
+# Run initialization once on startup
+init_backend()
+
+@app.route('/api/health')
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'environment': 'vercel' if os.environ.get('VERCEL') else 'local'
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -138,6 +151,16 @@ def api_login():
 
     login_user(user, remember=True)
     return jsonify({'message': 'Login successful', 'user': user.to_dict()})
+
+
+@app.route('/api/debug-db')
+def debug_db():
+    """Check if DB is accessible."""
+    try:
+        User.query.first()
+        return jsonify({'status': 'ok', 'message': 'Database connection active'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/logout', methods=['POST'])

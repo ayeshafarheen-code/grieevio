@@ -3,7 +3,7 @@
 ## Chapter 5: System Design
 
 ### System Architecture
-The GRIEEVIO project follows a robust Client-Server architecture designed for high availability and AI-driven efficiency. The frontend is built with responsive HTML5, CSS3, and JavaScript, ensuring a seamless user experience across devices. The backend is powered by the Flask web framework, acting as a central orchestration layer that manages authentication, business logic, and database operations via SQLAlchemy ORM. The core "intelligence" resides in a modular AI Engine that handles Natural Language Processing for complaint classification and Computer Vision for visual "Proof of Work" verification. This architecture ensures a clear separation of concerns, where the data layer (SQLite), logic layer (Flask), and intelligence layer (AI Engine) operate cohesively to provide an automated civic governance solution.
+The GRIEEVIO project is built on a scalable Client-Server architecture utilizing the Flask micro-framework for the backend and a modern responsive frontend. It features a decentralized AI Engine module that handles Natural Language Processing (NLP) for intelligent complaint categorization and Computer Vision for visual resolution verification. Data persistence is managed via an SQLite database with SQLAlchemy ORM for structured information storage. The system incorporates an autonomous escalation layer for SLA enforcement and a gamification engine to incentivize citizen participation. This multi-layered design ensures high performance, maintainability, and seamless integration of advanced AI services.
 
 ### Data Flow Diagram (DFD)
 
@@ -38,100 +38,152 @@ graph TD
 ## Chapter 6: System Implementation
 
 ### Implementation Overview
-The implementation of GRIEEVIO focuses on automating the civic grievance lifecycle through intelligent integration. 
+The GRIEEVIO implementation integrates frontend responsiveness, backend logic, and AI intelligence into a cohesive civic governance platform.
 
-1.  **Frontend Implementation**: Developed using a mobile-first approach with Vanilla CSS for maximum performance. Key components include a dynamic dashboard for tracking complaints and a specialized administrative panel for real-time city health monitoring.
-2.  **Backend Implementation**: Built using Python and Flask. It implements secure JWT-based authentication and structured API endpoints for CRUD operations. The backend integrates with `Flask-SQLAlchemy` for persistent data storage.
-3.  **AI Engine Implementation**: 
-    - **Classification**: Uses a weighted keyword-based algorithm to categorize complaints (Roads, Water, Electricity, etc.) with high precision.
-    - **Language Support**: Integrates `langdetect` and `googletrans` to support multi-lingual submissions, ensuring inclusivity.
-    - **Proof of Work**: Implements OpenCV (ORB feature matching) to compare "Before" and "After" photos, ensuring that reported issues are actually resolved before closing a ticket.
-4.  **Gamification Logic**: A points-based system is implemented to reward active citizens. Based on points, users are assigned badges (Bronze, Silver, Gold, Diamond), which are displayed on a public leaderboard to encourage community participation.
+#### 1. Frontend Implementation
+- **Responsive UI**: Developed with vanilla HTML/CSS and JavaScript for maximum compatibility and performance.
+- **Dynamic Dashboards**: Real-time tracking for citizens and a comprehensive management panel for administrators.
+- **Accessibility**: Integrated Google Translate API for multi-lingual support and Web Speech API for voice-based complaint submission.
+
+#### 2. Backend Implementation
+- **Flask Framework**: Handles routing, API endpoints, and authentication using `Flask-Login`.
+- **Database**: SQLite with `Flask-SQLAlchemy` for persistent storage of users, complaints, and AI scores.
+- **SLA Management**: Automated logic to assign deadlines based on complaint priority and escalate overdue tickets.
+
+#### 3. AI Core Implementation
+- **NLP Engine**: A weighted keyword-based classifier that automatically assigns categories (Roads, Water, etc.) and priority levels.
+- **Computer Vision**: ORB (Oriented FAST and Rotated BRIEF) feature matching algorithm implemented via OpenCV to verify if a "Before" and "After" photo represents the same location.
+- **Predictive Analytics**: A clustering algorithm that identifies recurring complaint "hotspots" to help authorities with preventive maintenance.
 
 ---
 
 ## Chapter 7: Testing
 
 ### Purpose of Testing
-The primary purpose of testing GRIEEVIO is to ensure the reliability, security, and accuracy of the automated grievance system. Testing validates that the AI classification works correctly, user data remains secure, and the system can handle concurrent requests without failure, ultimately providing a trustworthy platform for citizens.
+The primary goal of testing GRIEEVIO is to ensure the reliability and accuracy of the automated grievance lifecycle. Testing validates that the AI accurately classifies inputs, visual verification correctly identifies resolved issues, and the system remains secure and responsive under varied user interactions.
 
 ### Types of Testing
-1.  **Unit Testing**: Individual modules like the AI classification function and database models are tested in isolation to ensure they return expected outputs for given inputs.
-2.  **Integration Testing**: Focuses on the interaction between the Flask backend, the AI Engine, and the SQLite database to verify seamless data flow.
-3.  **Functional Testing**: Validates that all features (registration, complaint submission, admin updates) work according to the business requirements.
-4.  **UI/UX Testing**: Ensures the interface is responsive and intuitive across different screen sizes and browsers.
+1.  **Unit Testing**: Isolated testing of core logic such as the AI classification function in `ai_engine.py` and password hashing in `models.py`.
+2.  **Integration Testing**: Verifying the communication between the Flask API endpoints, the AI module, and the database layer.
+3.  **Functional Testing**: End-to-end testing of user flows including registration, complaint submission, and admin-led resolution.
+4.  **UI/UX Testing**: Ensures the application layout adjusts correctly on mobile devices and all interactive elements provide clear feedback.
 
 ### Level of Testing
-1.  **Component Level**: Testing specific functions in `ai_engine.py`.
-2.  - **System Level**: End-to-end testing of the entire application from user login to complaint resolution.
-3.  **Acceptance Level**: Final verification to ensure the system meets the user's needs for civic governance.
+1.  **Component Level**: Verifying individual functions and classes.
+2.  **System Level**: Testing the entire integrated application as a single entity.
+3.  **Acceptance Level**: Validating the software against user requirements for civic governance.
 
 ---
 
 ## Chapter 8: Snapshots
 
-### Source Code (Key Modules)
+### Source Code
 
-#### 1. AI Engine (`ai_engine.py`)
+#### 1. Configuration (`config.py`)
 ```python
-def classify_complaint(text):
-    # Weighted keyword-based scoring for civic issues
-    # Returns category, confidence, and detailed scores
-    ...
+import os
+
+if os.environ.get('VERCEL'):
+    BASE_DIR = '/tmp'
+else:
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'grieevio-secret-key-2026')
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 ```
 
-#### 2. Main Application (`app.py`)
+#### 2. Database Models (`models.py`)
 ```python
-@app.route('/api/complaints', methods=['POST'])
-@login_required
-def create_complaint():
-    # Handles submission, AI classification, and SLA assignment
-    ...
-```
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
-#### 3. Database Models (`models.py`)
-```python
+db = SQLAlchemy()
+
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), default='citizen')
+    points = db.Column(db.Integer, default=0)
+    badge = db.Column(db.String(50), default='Citizen')
+
 class Complaint(db.Model):
-    # Schema for tracking complaints, AI scores, and SLA deadlines
+    __tablename__ = 'complaints'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    title = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50), default='Other')
+    status = db.Column(db.String(30), default='Submitted')
+    priority = db.Column(db.String(20), default='Medium')
+    sla_deadline = db.Column(db.DateTime)
+```
+
+#### 3. AI Engine (`ai_engine.py`)
+```python
+import cv2
+import numpy as np
+from langdetect import detect
+from googletrans import Translator
+
+def classify_complaint(text):
+    # Weighted keyword-based scoring logic
     ...
+
+def verify_visual_resolution(before_path, after_path):
+    # ORB feature matching for Proof of Work
+    orb = cv2.ORB_create(nfeatures=500)
+    # ... compare images ...
+    return confidence > 30, round(confidence, 2)
+```
+
+#### 4. Main Application (`app.py`)
+```python
+from flask import Flask, render_template, request, jsonify
+from models import db, User, Complaint
+from ai_engine import classify_complaint
+
+app = Flask(__name__)
+# ... routes for auth, complaints, and AI ...
+
+@app.route('/api/complaints', methods=['POST'])
+def create_complaint():
+    # ... handles AI classification and storage ...
 ```
 
 ### Screenshots
-
-*(Representative UI Previews)*
-
-| Home Page | Dashboard |
-| :---: | :---: |
-| ![Home](https://i.ibb.co/vzVv4Y0/home.png) | ![Dashboard](https://i.ibb.co/vzVv4Y0/dash.png) |
-
-| New Complaint | Admin Panel |
-| :---: | :---: |
-| ![Complaint](https://i.ibb.co/vzVv4Y0/new.png) | ![Admin](https://i.ibb.co/vzVv4Y0/admin.png) |
+*(Screenshots to be included by the user in this section)*
 
 ---
 
 ## Chapter 9: Conclusion
-GRIEEVIO successfully bridges the gap between citizens and local authorities by leveraging AI to automate civic governance. By providing a transparent, multi-lingual, and gamified platform, it empowers residents to take part in city maintenance while ensuring accountability through visual "Proof of Work" verification. The system demonstrates how modern technology can transform traditional grievance redressing into an efficient, data-driven process.
+GRIEEVIO has successfully demonstrated the potential of integrating artificial intelligence into civic governance to create a more responsive and transparent urban environment. By automating the classification and verification of grievances, the platform reduces administrative overhead and ensures that urgent issues are prioritized through intelligent SLA management. The inclusion of multi-lingual support and voice recognition makes the system accessible to a wider demographic, fostering community-driven city maintenance. Furthermore, the gamification and visual "Proof of Work" systems build trust between citizens and authorities by providing tangible rewards and verifiable results. Ultimately, GRIEEVIO serves as a scalable blueprint for modern smart cities, proving that data-driven solutions can significantly enhance the quality of life for urban residents.
 
 ---
 
 ## Chapter 10: Future Enhancement & Bibliography
 
 ### Future Enhancement
-1.  **IoT Integration**: Deploying sensors in trash bins and water pipelines to automatically trigger complaints before citizens even notice the issue.
-2.  **Mobile App (Flutter/React Native)**: Developing native Android and iOS applications for better push notifications and real-time GPS tracking.
-3.  **Blockchain for Transparency**: Implementing a private blockchain to record all grievance actions, making the audit trail immutable and tamper-proof.
-4.  **Predictive Resource Allocation**: Enhancing the AI to predict where issues might occur based on historical trends, allowing authorities to perform preventive maintenance.
+1.  **IoT-Enabled Infrastructure**: Integrating smart sensors in waste bins and street lights to automatically trigger complaints based on sensor data (e.g., bin overflow or light failure).
+2.  **Blockchain Audit Trail**: Using a private blockchain to log every status change and verification step, ensuring an immutable record of governance actions.
+3.  **Mobile Native Application**: Developing a dedicated mobile app for Android and iOS with background GPS tracking and push notifications for real-time updates.
+4.  **Community Collaborative Voting**: Allowing neighbors to "upvote" local issues, which dynamically increases the priority of a complaint based on community consensus.
 
 ### Bibliography
 
 **Books:**
-1. *Python Web Development with Flask* - Jeff Forcier
-2. *Practical Machine Learning with Python* - Dipanjan Sarkar
-3. *Database Systems: The Complete Book* - Hector Garcia-Molina
+1. *Flask Web Development: Developing Web Applications with Python* - Miguel Grinberg
+2. *OpenCV 4 Computer Vision Projects with Python* - Joseph Howse
+3. *Natural Language Processing in Action* - Hobson Lane
 
 **References:**
-1. Flask Documentation: https://flask.palletsprojects.com/
-2. SQLAlchemy Documentation: https://www.sqlalchemy.org/
-3. OpenCV-Python Tutorials: https://docs.opencv.org/
-4. MDN Web Docs for Responsive Design: https://developer.mozilla.org/
+1. Flask Official Documentation: https://flask.palletsprojects.com/
+2. Python Speech Recognition Library: https://pypi.org/project/SpeechRecognition/
+3. Google Translate API for Python: https://py-googletrans.readthedocs.io/

@@ -7,8 +7,6 @@ GRIEEVIO AI Engine
 
 import re
 import os
-import cv2
-import numpy as np
 from datetime import datetime
 
 
@@ -181,6 +179,9 @@ def verify_visual_resolution(before_path, after_path):
         return False, 0.0
 
     try:
+        import cv2
+        import numpy as np
+        
         img1 = cv2.imread(b_path, cv2.IMREAD_GRAYSCALE)
         img2 = cv2.imread(a_path, cv2.IMREAD_GRAYSCALE)
 
@@ -223,6 +224,11 @@ def get_hotspot_predictions(complaints_data):
     """
     hotspots = []
     if not complaints_data:
+        return hotspots
+
+    try:
+        import numpy as np
+    except ImportError:
         return hotspots
 
     # Group by category and location (rounded to 2 decimal places ~1.1km)
