@@ -2,6 +2,22 @@
    GRIEEVIO – Admin Dashboard Logic
    ═══════════════════════════════════════════════════════════════════════════ */
 
+// ─── Initialize Supabase & Real-Time Listener ──────────────────────────────
+let supabaseClient;
+if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Subscribe to real-time changes
+    supabaseClient
+        .channel('public:complaints')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'complaints' }, payload => {
+            console.log('Real-time update received:', payload);
+            showToast('🔄 Real-time update: Complaints synchronized', 'info');
+            loadAdminDashboard();
+        })
+        .subscribe();
+}
+
 // ─── Load Admin Dashboard ──────────────────────────────────────────────────
 async function loadAdminDashboard() {
     await Promise.all([loadAdminStats(), loadAdminComplaints()]);

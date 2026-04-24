@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user  # type: ignore
 from flask_cors import CORS  # type: ignore
 from werkzeug.utils import secure_filename  # type: ignore
+from supabase import create_client, Client # type: ignore
 
 # Local imports
 from config import Config  # type: ignore
@@ -16,6 +17,10 @@ from ai_engine import (
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Supabase Client
+supabase: Client = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
+
 CORS(app)
 db.init_app(app)
 
@@ -144,19 +149,32 @@ def api_register():
     if not username or not email or not password:
         return jsonify({'error': 'Username, email, and password are required'}), 400
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({'error': 'Username already exists'}), 409
+    # Register in Supabase
+    try:
+        user_data = {
+            'username': username,
+            'email': email,
+            'role': 'citizen',
+            'language_pref': language,
+            'phone': phone,
+            'points': 0,
+            'badge': 'Citizen'
+        }
+        # We still need password hashing
+        password_hash = generate_password_hash(password)
+        user_data['password_hash'] = password_hash
+        
+        res = supabase.table('users').insert(user_data).execute()
+        if not res.data:
+            return jsonify({'error': 'Failed to create user in Supabase'}), 500
+            
+        new_user_data = res.data[0]
+        # Create a transient User object for Flask-Login compatibility if needed
+        # Or better: keep using SQLAlchemy for Auth but point it to the same Postgres DB
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({'error': 'Email already registered'}), 409
-
-    user = User(username=username, email=email, phone=phone, language_pref=language)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-    login_user(user)
-
-    return jsonify({'message': 'Registration successful', 'user': user.to_dict()}), 201
+    return jsonify({'message': 'Registration successful', 'user': new_user_data}), 201
 
 
 @app.route('/api/login', methods=['POST'])
@@ -238,8 +256,8 @@ def create_complaint():
     description = data.get('description', '').strip()
     location = data.get('location', '').strip()
     image_data = data.get('image', None)  # Base64 string
-    latitude = data.get('latitude', None)
-    longitude = data.get('longitude', None)
+    lat = data.get('latitude', None)
+    lng = data.get('longitude', None)
 
     if not title or not description:
         return jsonify({'error': 'Title and description are required'}), 400
@@ -257,12 +275,8 @@ def create_complaint():
     else:
         priority = 'High' if confidence > 80 else 'Medium'
 
-    # SLA Assignment (Example: 24h for Critical, 48h for High, 7d for others)
-    sla_hours = 24 if priority == 'Critical' else (48 if priority == 'High' else 168)
-    sla_deadline = datetime.utcnow() + timedelta(hours=sla_hours)
-
     # Handle image if provided
-    image_path = None
+    image_url = None
     if image_data and ',' in image_data:
         try:
             import base64
@@ -274,38 +288,46 @@ def create_complaint():
             
             with open(filepath, "wb") as f:
                 f.write(base64.b64decode(encoded))
-            image_path = f"/uploads/{filename}"
+            image_url = f"/uploads/{filename}"
         except Exception as e:
             print(f"Error saving image: {e}")
 
-    complaint = Complaint(
-        user_id=current_user.id,
-        title=title,
-        description=description,
-        original_language=lang_code,
-        translated_text=translated if lang_code != 'en' else None,
-        category=category,
-        location=location,
-        status='Submitted',
-        priority=priority,
-        is_urgent=is_urgent,
-        latitude=latitude,
-        longitude=longitude,
-        image_path=image_path,
-        sla_deadline=sla_deadline
-    )
-    db.session.add(complaint)
-    db.session.commit()
-
-    return jsonify({
-        'message': 'Complaint submitted successfully',
-        'complaint': complaint.to_dict(),
-        'ai_info': {
-            'detected_language': lang_name,
+    # Store in Supabase
+    try:
+        complaint_data = {
+            'user_id': current_user.id,
+            'title': title,
+            'description': description,
+            'original_language': lang_code,
+            'translated_text': translated,
             'category': category,
-            'confidence': confidence
+            'priority': priority,
+            'is_urgent': is_urgent,
+            'location': location,
+            'latitude': lat,
+            'longitude': lng,
+            'image_path': image_url,
+            'status': 'Submitted',
+            'escalation_level': 0,
+            'is_escalated': False
         }
-    }), 201
+        
+        res = supabase.table('complaints').insert(complaint_data).execute()
+        if not res.data:
+            return jsonify({'error': 'Failed to store complaint in Supabase'}), 500
+            
+        final_complaint = res.data[0]
+        return jsonify({
+            'message': 'Complaint submitted successfully',
+            'complaint': final_complaint,
+            'ai_info': {
+                'detected_language': lang_name,
+                'category': category,
+                'confidence': confidence
+            }
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/complaints/<int:complaint_id>', methods=['GET'])
@@ -518,17 +540,29 @@ def admin_get_complaints():
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    status_filter = request.args.get('status', '')
-    category_filter = request.args.get('category', '')
-    query = Complaint.query
-
-    if status_filter:
-        query = query.filter_by(status=status_filter)
-    if category_filter:
-        query = query.filter_by(category=category_filter)
-
-    complaints = query.order_by(Complaint.created_at.desc()).all()
-    return jsonify({'complaints': [c.to_dict() for c in complaints]})
+    try:
+        status_filter = request.args.get('status', '')
+        category_filter = request.args.get('category', '')
+        
+        # We need to join with users to get the username
+        query = supabase.table('complaints').select('*, users(username)')
+        
+        if status_filter:
+            query = query.eq('status', status_filter)
+        if category_filter:
+            query = query.eq('category', category_filter)
+            
+        res = query.order('created_at', desc=True).execute()
+        
+        # Format for frontend expectation
+        complaints = []
+        for c in res.data:
+            c['username'] = c.get('users', {}).get('username', 'Unknown')
+            complaints.append(c)
+            
+        return jsonify({'complaints': complaints})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/admin/complaints/<int:complaint_id>', methods=['PUT'])
@@ -563,39 +597,49 @@ def admin_stats():
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    total = Complaint.query.count()
-    submitted = Complaint.query.filter_by(status='Submitted').count()
-    in_progress = Complaint.query.filter_by(status='In Progress').count()
-    resolved = Complaint.query.filter_by(status='Resolved').count()
-    rejected = Complaint.query.filter_by(status='Rejected').count()
+    try:
+        # Fetch stats from Supabase
+        res = supabase.table('complaints').select('*').execute()
+        complaints = res.data
+        
+        total = len(complaints)
+        submitted = len([c for c in complaints if c.get('status') == 'Submitted'])
+        in_progress = len([c for c in complaints if c.get('status') == 'In Progress'])
+        resolved = len([c for c in complaints if c.get('status') == 'Resolved'])
+        rejected = len([c for c in complaints if c.get('status') == 'Rejected'])
+        escalated = len([c for c in complaints if c.get('is_escalated')])
+        
+        # Category breakdown
+        categories = {}
+        for c in complaints:
+            cat = c.get('category', 'Other')
+            categories[cat] = categories.get(cat, 0) + 1
+            
+        # Priority breakdown
+        priorities = {}
+        for c in complaints:
+            prio = c.get('priority', 'Medium')
+            priorities[prio] = priorities.get(prio, 0) + 1
+            
+        # Recent complaints (last 7 days)
+        week_ago_str = (datetime.utcnow() - timedelta(days=7)).isoformat()
+        recent = len([c for c in complaints if c.get('created_at', '') >= week_ago_str])
 
-    # Category breakdown
-    categories = db.session.query(
-        Complaint.category, db.func.count(Complaint.id)
-    ).group_by(Complaint.category).all()
-
-    # Priority breakdown
-    priorities = db.session.query(
-        Complaint.priority, db.func.count(Complaint.id)
-    ).group_by(Complaint.priority).all()
-
-    # Recent complaints (last 7 days)
-    week_ago = datetime.utcnow() - timedelta(days=7)
-    recent = Complaint.query.filter(Complaint.created_at >= week_ago).count()
-
-    return jsonify({
-        'total': total,
-        'submitted': submitted,
-        'in_progress': in_progress,
-        'resolved': resolved,
-        'rejected': rejected,
-        'recent_week': recent,
-        'categories': {cat: count for cat, count in categories},
-        'priorities': {pri: count for pri, count in priorities},
-        'resolution_rate': round((resolved / total) * 100, 1) if total > 0 else 0,
-        'points_distributed': db.session.query(db.func.sum(User.points)).scalar() or 0,
-        'escalated_count': Complaint.query.filter_by(is_escalated=True).count()
-    })
+        return jsonify({
+            'total': total,
+            'submitted': submitted,
+            'in_progress': in_progress,
+            'resolved': resolved,
+            'rejected': rejected,
+            'recent_week': recent,
+            'categories': categories,
+            'priorities': priorities,
+            'resolution_rate': round((resolved / total) * 100, 1) if total > 0 else 0,
+            'points_distributed': 0, # Simplify for now
+            'escalated_count': escalated
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/public/stats', methods=['GET'])

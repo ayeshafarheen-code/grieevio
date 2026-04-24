@@ -26,3 +26,7 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+
+    # Supabase Integration
+    SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://kucuqbijevjtrpigcvss.supabase.co')
+    SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_publishable_31sQhl2dQv8nryFyOYEvEA_8sDVJdA9')
