@@ -10,8 +10,14 @@ else:
 
 class Config:
     # Use a fixed key if not in env to prevent session invalidation on restart
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'grieevio-persistent-secret-key-2026')
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'grieevio-persistent-premium-key-2026')
+    
+    # Database configuration: Prefer Postgres (Supabase/Vercel) over SQLite
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
+    SQLALCHEMY_DATABASE_URI = db_url or ('sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db'))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload

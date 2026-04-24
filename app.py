@@ -33,7 +33,7 @@ def load_user(user_id):
 
 
 def seed_demo_data():
-    """Ensure at least one admin user and some sample data exists."""
+    """Ensure the admin user exists, but do not seed dummy data."""
     # Seed Admin
     if not User.query.filter_by(role='admin').first():
         admin = User(
@@ -44,46 +44,8 @@ def seed_demo_data():
         )
         admin.set_password('admin123')
         db.session.add(admin)
+        db.session.commit()
         print("✓ Default admin user seeded.")
-
-    # Seed Demo Citizen and Complaints if empty
-    if not User.query.filter_by(role='citizen').first():
-        citizen = User(
-            username='demo_citizen',
-            email='citizen@demo.com',
-            role='citizen',
-            language_pref='en',
-            phone='+91-9876543210'
-        )
-        citizen.set_password('citizen123')
-        db.session.add(citizen)
-        db.session.flush()
-
-        # Sample complaints
-        samples = [
-            {
-                'title': 'Pothole on Main Street',
-                'description': 'Large pothole near the bus stop needs urgent repair.',
-                'category': 'Roads',
-                'location': 'Main Street, Sector 15',
-                'priority': 'High',
-                'status': 'In Progress'
-            },
-            {
-                'title': 'Street light broken',
-                'description': 'Street light not working in Green Valley Colony.',
-                'category': 'Street Lighting',
-                'location': 'Green Valley Colony',
-                'priority': 'Medium',
-                'status': 'Submitted'
-            }
-        ]
-        for s in samples:
-            c = Complaint(user_id=citizen.id, **s)
-            db.session.add(c)
-        print(f"✓ Demo citizen and {len(samples)} sample complaints seeded.")
-    
-    db.session.commit()
 
 
 # Create tables and directories on startup

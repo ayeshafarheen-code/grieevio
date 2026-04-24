@@ -602,6 +602,23 @@ textarea.form-control {
     padding: 2rem;
 }
 
+.dashboard-section {
+    margin-bottom: 4rem;
+    animation: fadeUp 0.6s ease forwards;
+}
+
+.dashboard-section .section-header {
+    text-align: left;
+    margin-bottom: 2rem;
+    border-left: 4px solid var(--accent-primary);
+    padding-left: 1.5rem;
+}
+
+.dashboard-section .section-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
 .page-header {
     display: flex;
     align-items: center;
@@ -625,20 +642,21 @@ textarea.form-control {
 /* ─── Stats Cards ───────────────────────────────────────────────────────── */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
 }
 
 .stat-card {
-    background: var(--gradient-card);
-    backdrop-filter: blur(10px);
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
     border: 1px solid var(--border-glass);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
+    border-radius: var(--radius-xl);
+    padding: 1.75rem;
     transition: var(--transition);
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow-md);
 }
 
 .stat-card:hover {
@@ -1085,19 +1103,19 @@ textarea.form-control {
 
 .admin-table th {
     text-align: left;
-    padding: 0.85rem 1.25rem;
-    font-size: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     color: var(--text-muted);
-    font-weight: 600;
+    font-weight: 700;
     border-bottom: 1px solid var(--border-glass);
-    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .admin-table td {
-    padding: 0.85rem 1.25rem;
-    font-size: 0.88rem;
+    padding: 1.25rem 1.5rem;
+    font-size: 0.92rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     vertical-align: middle;
 }
@@ -1137,17 +1155,18 @@ textarea.form-control {
 /* ─── Charts Container ──────────────────────────────────────────────────── */
 .charts-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    margin-bottom: 2.5rem;
 }
 
 .chart-card {
     background: var(--bg-card);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(20px);
     border: 1px solid var(--border-glass);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
 }
 
 .chart-card h3 {
