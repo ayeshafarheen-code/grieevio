@@ -26,13 +26,26 @@ async function apiCall(url, method = 'GET', body = null) {
     };
     if (body) opts.body = JSON.stringify(body);
 
-    const res = await fetch(url, opts);
-    const data = await res.json();
+    try {
+        const res = await fetch(url, opts);
+        
+        // Handle session expiration or unauthorized access
+        if (res.status === 401 && !url.includes('/api/login')) {
+            console.warn('Session expired or unauthorized. Redirecting to login...');
+            window.location.href = '/login';
+            return;
+        }
 
-    if (!res.ok) {
-        throw new Error(data.error || 'Request failed');
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || `Request failed with status ${res.status}`);
+        }
+        return data;
+    } catch (err) {
+        console.error(`API Call Error (${url}):`, err);
+        throw err;
     }
-    return data;
 }
 
 // ─── Auth Functions ────────────────────────────────────────────────────────
