@@ -23,28 +23,29 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login_page'
 
+
 @login_manager.user_loader
 def load_user(user_id):
-    try:
-        return User.query.get(int(user_id))
-    except Exception:
-        return None
+    return User.query.get(int(user_id))
+
 
 # Create tables and directories on startup
-try:
-    with app.app_context():
+with app.app_context():
+    try:
         db.create_all()
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-except Exception as e:
-    app.logger.error(f"Startup warning: {e}")
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+        print("Database and upload folders initialized.")
+    except Exception as e:
+        print(f"Startup warning: {e}")
 
-@app.route('/api/health')
+
+@app.route('/health')
 def health_check():
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat(),
-        'environment': 'vercel' if os.environ.get('VERCEL') else 'local'
+        'database': str(db.engine.url.drivername),
+        'storage': 'local-tmp' if os.environ.get('VERCEL') else 'local-dev'
     })
 
 
@@ -147,16 +148,6 @@ def api_login():
 
     login_user(user, remember=True)
     return jsonify({'message': 'Login successful', 'user': user.to_dict()})
-
-
-@app.route('/api/debug-db')
-def debug_db():
-    """Check if DB is accessible."""
-    try:
-        User.query.first()
-        return jsonify({'status': 'ok', 'message': 'Database connection active'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/logout', methods=['POST'])

@@ -12,14 +12,14 @@ dependencies = [
     "Flask-Login",
     "Flask-CORS",
     "langdetect",
-    "googletrans==3.1.0a0",
+    "googletrans==4.0.0-rc1",
     "SpeechRecognition",
+    "gunicorn",
     "opencv-python-headless",
-    "numpy",
-    "psycopg2-binary"
+    "numpy"
 ]
 
 [tool.pyright]
 include = ["."]
-extraPaths = ["./"]
+extraPaths = ["."]
 typeCheckingMode = "basic"

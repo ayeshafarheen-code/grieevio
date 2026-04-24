@@ -11,13 +11,11 @@
         {
             "root": ".",
             "extraPaths": [
-                "./"
+                "."
             ]
         }
     ],
     "typeCheckingMode": "basic",
     "pythonVersion": "3.12",
-    "pythonPlatform": "Windows",
-    "reportMissingImports": "warning",
-    "reportMissingTypeStubs": false
+    "pythonPlatform": "Windows"
 }

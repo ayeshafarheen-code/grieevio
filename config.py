@@ -1,6 +1,6 @@
 import os
 
-# Handle Vercel's read-only filesystem (fallback for future serverless deployments)
+# Handle Vercel's read-only filesystem
 if os.environ.get('VERCEL'):
     BASE_DIR = '/tmp'
 else:
@@ -9,10 +9,7 @@ else:
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'grieevio-secret-key-2026')
-    
-    # Standard SQLite Database (Local)
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
