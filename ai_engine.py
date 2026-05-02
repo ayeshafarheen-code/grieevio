@@ -133,10 +133,9 @@ def translate_text(text, source='auto', target='en'):
         pass
 
     try:
-        from googletrans import Translator
-        translator = Translator()
-        result = translator.translate(text, src=source, dest=target)
-        return result.text
+        from deep_translator import GoogleTranslator
+        translated = GoogleTranslator(source='auto', target=target).translate(text)
+        return translated or text
     except Exception:
         # Fallback: return original text
         return text
