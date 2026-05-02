@@ -19,8 +19,10 @@ function showToast(message, type = 'info') {
 
 // ─── Supabase Configuration ────────────────────────────────────────────────
 // These should be set in Vercel Environment Variables or a config.js
-const SUPABASE_URL = window.SUPABASE_URL || ""; 
-const SUPABASE_KEY = window.SUPABASE_KEY || "";
+// ─── Supabase Configuration ────────────────────────────────────────────────
+// PASTE YOUR KEYS HERE
+const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
+const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
 
 let supabase;
 if (SUPABASE_URL && SUPABASE_KEY) {
