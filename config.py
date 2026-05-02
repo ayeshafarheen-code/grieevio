@@ -27,6 +27,9 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
+    # Groq AI Integration
+    GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
     # Supabase Integration
-    SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://kucuqbijevjtrpigcvss.supabase.co')
-    SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_publishable_31sQhl2dQv8nryFyOYEvEA_8sDVJdA9')
+    SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+    SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
