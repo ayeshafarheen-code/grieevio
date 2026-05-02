@@ -102,7 +102,8 @@ async function handleRegister(e) {
             showToast('Account created! Redirecting...', 'success');
             setTimeout(() => window.location.href = '/dashboard.html', 1500);
         } else {
-            showToast('Success! Please check your email for confirmation.', 'info');
+            showToast('Account created! Please CHECK YOUR EMAIL to confirm your account before logging in.', 'info');
+            setTimeout(() => window.location.href = '/login.html', 4000);
         }
 
     } catch (err) {
