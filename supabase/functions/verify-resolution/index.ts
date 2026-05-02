@@ -5,10 +5,10 @@ const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY")
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
     const { complaint_id, after_image } = await req.json()
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
     const { data: c } = await supabase.from('complaints').select('*').eq('id', complaint_id).single()
     if (!c) throw new Error("Complaint not found")
@@ -48,6 +48,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(parsed), { headers: { "Content-Type": "application/json" } })
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { "Content-Type": "application/json" } })
+    const message = err instanceof Error ? err.message : String(err)
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { "Content-Type": "application/json" } })
   }
 })
