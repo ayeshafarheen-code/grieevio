@@ -1,100 +1,114 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   GRIEEVIO - NEW SUPABASE AUTH (REBUILT FROM SCRATCH)
+   GRIEEVIO - BULLETPROOF SUPABASE AUTH
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const SUPABASE_URL = "https://kucuqbijevjtrpigcvss.supabase.co";
 const SUPABASE_KEY = "sb_publishable_31sQhl2dQv8nryFyOYEvEA_8sDVJdA9";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let supabase;
 
-// ─── AUTH ACTIONS ─────────────────────────────────────────────────────────
-
-async function signUp(email, password, metadata) {
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: metadata }
-    });
-    if (error) throw error;
-    return data;
+try {
+    // Standard initialization for Supabase v2 CDN
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log("✅ Supabase Initialized Successfully");
+} catch (e) {
+    alert("CRITICAL: Failed to initialize Supabase library. Please check your internet connection.");
+    console.error(e);
 }
 
-async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
-    if (error) throw error;
-    return data;
-}
+// ─── LOGIN HANDLER ────────────────────────────────────────────────────────
 
-async function signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    window.location.href = "/login.html";
-}
-
-async function getSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session;
-}
-
-// ─── PAGE LOGIC ───────────────────────────────────────────────────────────
-
-// Handle Login Form
 async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value;
+    console.log("Login attempt started...");
+    
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const btn = e.target.querySelector('button');
 
+    if (!supabase) {
+        alert("Error: Supabase is not initialized. Check console.");
+        return;
+    }
+
     try {
         btn.disabled = true;
-        btn.textContent = "Authenticating...";
-        
-        const data = await signIn(email, password);
-        console.log("Logged in:", data.user);
-        
+        btn.textContent = "⏳ Authenticating...";
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        if (error) throw error;
+
+        console.log("Login successful!", data);
         const role = data.user.user_metadata?.role || 'citizen';
         window.location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
+
     } catch (err) {
-        alert("Login Failed: " + err.message);
+        console.error("Login failed:", err);
+        alert("Login Error: " + err.message);
         btn.disabled = false;
         btn.textContent = "Login";
     }
 }
 
-// Handle Register Form
+// ─── REGISTER HANDLER ─────────────────────────────────────────────────────
+
 async function handleRegister(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value;
+    console.log("Registration attempt started...");
+
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const username = document.getElementById('username').value;
+    const username = document.getElementById('username').value.trim();
     const btn = e.target.querySelector('button');
+
+    if (!supabase) {
+        alert("Error: Supabase is not initialized. Check console.");
+        return;
+    }
 
     try {
         btn.disabled = true;
-        btn.textContent = "Creating Account...";
-        
-        const data = await signUp(email, password, { username, role: 'citizen' });
-        
+        btn.textContent = "⏳ Creating Account...";
+
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    username: username,
+                    role: 'citizen'
+                }
+            }
+        });
+
+        if (error) throw error;
+
         if (data.session) {
+            console.log("Registered and Logged In:", data);
             window.location.href = "/dashboard.html";
         } else {
-            alert("Registration Success! Please check your email for a confirmation link.");
+            console.log("Registered, awaiting confirmation");
+            alert("Success! Now check your email for the confirmation link to activate your account.");
             window.location.href = "/login.html";
         }
+
     } catch (err) {
-        alert("Registration Failed: " + err.message);
+        console.error("Registration failed:", err);
+        alert("Registration Error: " + err.message);
         btn.disabled = false;
         btn.textContent = "Register";
     }
 }
 
-// Global Auth Guard (Run on protected pages)
-async function authGuard() {
-    const session = await getSession();
-    if (!session) {
-        window.location.href = "/login.html";
+// ─── LOGOUT HANDLER ───────────────────────────────────────────────────────
+
+async function handleLogout() {
+    if (supabase) {
+        await supabase.auth.signOut();
     }
+    window.location.href = "/login.html";
 }
