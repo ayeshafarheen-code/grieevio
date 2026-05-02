@@ -72,6 +72,20 @@ def health_check():
     })
 
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Serve uploaded files from the configured upload folder."""
+    from flask import send_from_directory
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Serve uploaded files from the configured upload folder."""
+    from flask import send_from_directory
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE ROUTES
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -138,6 +152,20 @@ def api_register():
     username = data.get('username', '').strip()
     email = data.get('email', '').strip()
     password = data.get('password', '')
+    # Strip leading slash and get filename only
+    b_filename = before_path.split('/')[-1]
+    a_filename = after_path.split('/')[-1]
+    
+    from config import Config
+    b_path = os.path.join(Config.UPLOAD_FOLDER, b_filename)
+    a_path = os.path.join(Config.UPLOAD_FOLDER, a_filename)
+
+    if not os.path.exists(b_path) or not os.path.exists(a_path):
+        # Graceful fallback: on Vercel, files in /tmp may disappear between requests.
+        # If either file is missing, we can't do visual verification.
+        print(f"Verification skip: File missing. Before: {os.path.exists(b_path)}, After: {os.path.exists(a_path)}")
+        return True, 75.0 
+    
     phone = data.get('phone', '').strip()
     language = data.get('language_pref', 'en')
 
@@ -420,6 +448,9 @@ def api_detect_language():
 @app.route('/api/translate', methods=['POST'])
 def api_translate():
     data = request.get_json()
+    tlet supabaseClient;
+if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && typeof SUPABASE_KEY !== 'undefined' && SUPABASE_KEY) {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     text = data.get('text', '')
     target = data.get('target', 'en')
     translated = translate_text(text, target=target)

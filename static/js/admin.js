@@ -4,7 +4,7 @@
 
 // ─── Initialize Supabase & Real-Time Listener ──────────────────────────────
 let supabaseClient;
-if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') {
+if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && typeof SUPABASE_KEY !== 'undefined' && SUPABASE_KEY) {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     // Subscribe to real-time changes

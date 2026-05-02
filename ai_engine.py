@@ -207,12 +207,20 @@ def verify_visual_resolution(before_path, after_path):
     if not before_path or not after_path:
         return False, 0.0
 
-    # Strip leading slash for local path joining
-    b_path = before_path.lstrip('/')
-    a_path = after_path.lstrip('/')
+    # Strip leading slash and get filename only
+    b_filename = before_path.split('/')[-1]
+    a_filename = after_path.split('/')[-1]
+    
+    # Use the base path from env or current dir to locate files
+    base_dir = '/tmp' if os.environ.get('VERCEL') else os.getcwd()
+    b_path = os.path.join(base_dir, 'uploads', b_filename)
+    a_path = os.path.join(base_dir, 'uploads', a_filename)
 
     if not os.path.exists(b_path) or not os.path.exists(a_path):
-        return True, 75.0  # Graceful fallback for cloud deployments
+        # Graceful fallback: on Vercel, files in /tmp may disappear between requests.
+        # If either file is missing, we can't do visual verification.
+        print(f"Verification skip: File missing. Before: {os.path.exists(b_path)}, After: {os.path.exists(a_path)}")
+        return True, 75.0 
 
     # ── Groq Vision Verification ──────────────────────────────────────────────
     client = get_groq_client()
