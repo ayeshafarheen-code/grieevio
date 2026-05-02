@@ -89,7 +89,7 @@ async function loadAdminComplaints(status = '', category = '') {
     try {
         let query = supabase.from('complaints').select(`
             *,
-            users:user_id ( username )
+            profiles:user_id ( username )
         `);
 
         if (status) query = query.eq('status', status);
@@ -112,7 +112,7 @@ async function loadAdminComplaints(status = '', category = '') {
                             ${escapeHtml(c.title)}
                             ${c.is_urgent ? '<span class="badge badge-danger" style="font-size: 0.6rem; vertical-align: middle; margin-left: 5px;">URGENT</span>' : ''}
                         </strong>
-                        <span style="color: var(--text-muted); font-size: 0.78rem;">by ${escapeHtml(c.users?.username || 'Unknown')}</span>
+                        <span style="color: var(--text-muted); font-size: 0.78rem;">by ${escapeHtml(c.profiles?.username || 'Unknown')}</span>
                     </div>
                 </td>
                 <td>${getCategoryBadge(c.category)}</td>

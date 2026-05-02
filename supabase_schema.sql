@@ -1,13 +1,24 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- GRIEEVIO – Supabase Database Schema
--- Paste this into the Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql)
+-- GRIEEVIO – Updated Supabase Database Schema
+-- Paste this into the Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- 1. Complaints Table
+-- 1. Profiles Table (Correct UUID mapping)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  username TEXT,
+  phone TEXT,
+  role TEXT DEFAULT 'citizen',
+  points INTEGER DEFAULT 0,
+  badge TEXT DEFAULT 'None',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Complaints Table
 CREATE TABLE IF NOT EXISTS public.complaints (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     category TEXT DEFAULT 'Other',
@@ -27,67 +38,34 @@ CREATE TABLE IF NOT EXISTS public.complaints (
     translated_text TEXT
 );
 
--- 2. Enable Row Level Security (RLS)
+-- 3. Enable RLS
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.complaints ENABLE ROW LEVEL SECURITY;
 
--- 3. RLS Policies
+-- 4. Profile Policies
+CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- Citizens can view their own complaints
-CREATE POLICY "Users can view their own complaints" 
-ON public.complaints FOR SELECT 
-USING (auth.uid() = user_id);
+-- 5. Complaint Policies
+CREATE POLICY "Users can view their own complaints" ON public.complaints FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own complaints" ON public.complaints FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete their own complaints" ON public.complaints FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Admins can view all complaints" ON public.complaints FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+CREATE POLICY "Admins can update any complaint" ON public.complaints FOR UPDATE USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
--- Citizens can insert their own complaints
-CREATE POLICY "Users can insert their own complaints" 
-ON public.complaints FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
+-- 6. Automatic Profile Creation Trigger
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, role)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'username', 'citizen');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Citizens can delete their own complaints
-CREATE POLICY "Users can delete their own complaints" 
-ON public.complaints FOR DELETE 
-USING (auth.uid() = user_id);
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Admins can view ALL complaints
-CREATE POLICY "Admins can view all complaints" 
-ON public.complaints FOR SELECT 
-USING ( (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' );
-
--- Admins can update ANY complaint
-CREATE POLICY "Admins can update any complaint" 
-ON public.complaints FOR UPDATE 
-USING ( (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' );
-
--- Public can view basic stats (if needed for index.html)
-CREATE POLICY "Public can view complaint count"
-ON public.complaints FOR SELECT
-USING (true);
-
--- 4. Storage Bucket
--- IMPORTANT: Go to Storage in Dashboard and create a public bucket named 'complaints'
-
--- 5. Automatic AI Processing Trigger (Optional)
--- This requires the 'pg_net' extension enabled in Supabase
--- CREATE EXTENSION IF NOT EXISTS pg_net;
-
--- CREATE OR REPLACE FUNCTION public.trigger_ai_processing()
--- RETURNS TRIGGER AS $$
--- BEGIN
---   PERFORM net.http_post(
---     url := 'https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/process-complaint',
---     headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer <YOUR_ANON_KEY>'),
---     body := jsonb_build_object('complaint_id', NEW.id)
---   );
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- CREATE TRIGGER after_complaint_insert
--- AFTER INSERT ON public.complaints
--- FOR EACH ROW EXECUTE FUNCTION public.trigger_ai_processing();
-
--- ═══════════════════════════════════════════════════════════════════════════
--- INSTRUCTIONS:
--- 1. Run this SQL in the Supabase Dashboard.
--- 2. Create a Storage Bucket named 'complaints' and set it to Public.
--- 3. Set the Bucket RLS to allow authenticated users to upload to '<user_id>/' folder.
--- ═══════════════════════════════════════════════════════════════════════════
+-- 7. Storage (Manual Step)
+-- Create a bucket named 'complaints' and set to Public.
