@@ -22,22 +22,14 @@
 ### 1.1 Introduction
 Urban governance and civic maintenance are critical components of a functioning society. However, the traditional methods of reporting and resolving civic issues—such as potholes, broken streetlights, and water logging—are often plagued by bureaucratic delays, lack of transparency, and inefficient resource allocation. 
 
-**GRIEEVIO** is an advanced, AI-powered Smart Complaint Management System designed to bridge the gap between citizens and municipal authorities. By leveraging modern web technologies, Artificial Intelligence (AI), and real-time database synchronization, GRIEEVIO provides a seamless, transparent, and gamified platform for reporting, tracking, and resolving civic complaints. The platform not only empowers citizens through a user-friendly interface but also equips administrators with predictive analytics and automated workflows to prioritize and assign tasks effectively.
-
-### 1.2 Objective
-The primary objectives of the GRIEEVIO project are to:
-1. **Automate Complaint Triage:** Utilize Natural Language Processing (NLP) to automatically categorize and prioritize complaints based on their severity.
-2. **Enhance Accessibility:** Provide multilingual support and voice-to-text capabilities to ensure the platform is accessible to all demographics, regardless of literacy or language barriers.
-3. **Ensure Accountability:** Implement AI-driven visual verification (Proof of Work) to ensure that complaints are genuinely resolved before they are closed.
-4. **Predictive Maintenance:** Analyze historical complaint data to generate predictive hotspot maps, allowing authorities to take preventive action.
-5. **Increase Citizen Engagement:** Introduce a gamification system (points and badges) to incentivize citizens for reporting accurate and valuable civic issues.
+The platform not only empowers citizens through a user-friendly interface but also equips administrators with predictive analytics and automated serverless workflows to prioritize and assign tasks effectively.
 
 ### 1.3 Scope of the project
-The scope of GRIEEVIO encompasses the development of a complete end-to-end web application featuring two primary interfaces:
+The scope of GRIEEVIO encompasses the development of a complete end-to-end serverless web application featuring two primary interfaces:
 - **Citizen Dashboard:** A portal for users to register, submit complaints (via text, voice, or image), track status, and view their gamification rewards.
-- **Admin Dashboard:** A centralized control panel for municipal authorities providing real-time complaint updates, AI predictive hotspot maps, statistical charts, and operational management tools.
+- **Admin Dashboard:** A centralized control panel for municipal authorities providing real-time complaint updates, statistical charts, and operational management tools.
 
-The system relies on cloud infrastructure (Vercel) and a robust Postgres database (Supabase) to ensure high availability, fast response times, and real-time data synchronization.
+The system relies on cloud infrastructure (Vercel) and a robust serverless backend (Supabase) to ensure high availability, fast response times, and real-time data synchronization.
 
 ---
 
@@ -46,19 +38,17 @@ The system relies on cloud infrastructure (Vercel) and a robust Postgres databas
 ### 2.1 Technologies and Tools
 The development of GRIEEVIO requires a modern technology stack capable of handling real-time data, AI integrations, and responsive user interfaces. 
 
-#### 2.1.1 Python and Libraries
-Python was selected as the core backend programming language due to its extensive support for AI and web development. The key libraries include:
-- **Flask:** A lightweight, highly scalable micro-framework used to build the RESTful APIs and serve the backend architecture.
-- **Flask-SQLAlchemy:** An Object Relational Mapper (ORM) used to bridge the Flask application with the PostgreSQL database.
-- **SpeechRecognition & GoogleTrans:** Libraries utilized to provide accessibility features, allowing voice complaints to be transcribed and translated seamlessly into English for backend processing.
-- **OpenCV (opencv-python-headless):** Used alongside AI models for backend image processing, ensuring that user-uploaded evidence is properly formatted before analysis.
+#### 2.1.1 Supabase & Edge Functions
+Supabase was selected as the core backend infrastructure, providing a serverless environment that handles authentication, database management, and AI logic.
+- **Supabase Auth:** Handles secure user registration and login with JWT-based session management.
+- **Supabase Edge Functions (Deno):** Used to execute backend AI logic in a serverless environment. These functions are written in TypeScript and run globally on the Edge.
+- **PostgreSQL:** A robust relational database used to store complaints and user profiles, with real-time broadcasting capabilities.
+- **Supabase Storage:** Used to store high-resolution evidence images and voice recordings.
 
-#### 2.1.2 Machine Learning Models
-GRIEEVIO heavily integrates Generative AI to automate mundane administrative tasks.
-- **Google Gemini AI (google-generativeai):** This Large Language Model (LLM) acts as the core intelligence of the platform. It is responsible for:
-  - Reading complaint descriptions and categorizing them (e.g., Roads, Sanitation, Lighting).
-  - Assigning priority levels based on semantic sentiment analysis (e.g., flagging "accidents" as Critical).
-  - **Vision AI Verification:** Analyzing "before" and "after" images to autonomously verify if a reported civic issue has been physically resolved by the assigned workers.
+#### 2.1.2 Machine Learning & Groq
+GRIEEVIO heavily integrates state-of-the-art Generative AI via the Groq API for near-instant inference.
+- **Llama 3 (via Groq):** Acts as the core intelligence for NLP tasks, including categorization, priority assignment, and translation.
+- **Llama 3.2 Vision (via Groq):** Used for "Proof of Work" verification, comparing 'before' and 'after' images to ensure task resolution.
 
 ---
 
@@ -85,10 +75,10 @@ GRIEEVIO proposes a cloud-native, AI-first approach to solve these issues:
 - **Real-time Synchronization:** Utilizing Supabase, the admin dashboard updates instantaneously without requiring page reloads when new complaints arrive.
 
 ### 3.4 System Modules
-1. **Authentication Module:** Secure registration and login using encrypted passwords.
-2. **Citizen Portal Module:** Interfaces for creating complaints, uploading evidence, and viewing leaderboards.
-3. **AI Engine Module:** The backend logic processing NLP, translation, and computer vision tasks.
-4. **Admin Dashboard Module:** Visualizations, predictive maps (Leaflet.js), and operational controls for managing complaint lifecycles.
+1. **Authentication Module:** Secure registration and login using Supabase Auth.
+2. **Citizen Portal Module:** Static SPA interface for creating complaints and tracking status.
+3. **AI Edge Functions Module:** Serverless logic processing NLP, translation, and computer vision tasks.
+4. **Admin Dashboard Module:** Real-time visualizations and operational controls powered by Supabase Realtime.
 
 ---
 
@@ -342,33 +332,16 @@ The data layer was the first functional component to be implemented using Supaba
 - **Real-Time Configuration:** Using the Supabase Studio dashboard, the "Realtime" feature was explicitly toggled 'ON' for the `complaints` table, allowing the database to broadcast PostgreSQL triggers via WebSockets.
 - **Storage Buckets:** A public storage bucket named `evidence` was configured to handle image and audio uploads directly.
 
-### 6.3 Backend Implementation (Flask & Python)
-The server logic acts as the middleware connecting the frontend, the database, and the AI models.
-- **App Initialization:** `app.py` was created to initialize the Flask application and configure the SQLAlchemy database URI using environment variables.
-- **API Endpoints:** RESTful routes were developed:
-  - `POST /register` and `POST /login` for authentication.
-  - `POST /submit_complaint` to handle form data, files, and audio blobs from the citizen dashboard.
-  - `GET /admin_stats` to fetch aggregated data for the admin charts.
-- **File Handling:** Logic was written to safely parse `multipart/form-data`, ensuring that uploaded images and audio are processed and temporarily stored before being sent to the AI engine or cloud storage.
+### 6.3 Serverless Logic (Supabase Edge Functions)
+The backend logic acts as the middleware connecting the frontend, the database, and the AI models.
+- **Deno Environment:** Logic is written in TypeScript and executed via Supabase Edge Functions.
+- **API Endpoints:** Direct database calls from the frontend for CRUD, and Edge Function invocations for AI tasks.
+- **File Handling:** Files are uploaded directly to Supabase Storage, bypassing the need for a temporary file server.
 
-### 6.4 AI Engine Integration (`ai_engine.py`)
+### 6.4 AI Integration (Groq)
 This module is the core innovation of GRIEEVIO, abstracting all machine learning tasks.
-- **Audio Processing:** The `SpeechRecognition` library was implemented to convert citizen audio blobs into localized text. If the text was non-English, `googletrans` was used to translate it into English.
-- **Generative AI Triage:** The `google-generativeai` SDK was imported. A specific "system prompt" was engineered to instruct the Gemini LLM to act as a civic administrator. The prompt forces the LLM to output a structured JSON response containing the `category` and `priority` based on the complaint text.
-- **Proof of Work (Vision AI):** The Gemini Vision model was integrated to accept two image inputs (the original citizen image and the admin's resolution image). The model analyzes the spatial and contextual differences between the two and returns a boolean value (`True` if the issue appears fixed, `False` otherwise).
-
-### 6.5 Frontend Implementation
-The user interfaces were built to be highly interactive and aesthetically modern.
-- **Glassmorphism CSS:** A custom CSS stylesheet (`style.css`) was written to implement frosted glass effects (using `backdrop-filter: blur`), vibrant gradients, and responsive CSS Grid layouts.
-- **Asynchronous Requests:** The Vanilla JavaScript `fetch` API was utilized extensively to submit forms to the Flask backend without causing page reloads, ensuring a smooth Single Page Application (SPA) feel.
-- **Real-Time Client (Supabase JS):** On the Admin dashboard, the Supabase JavaScript Client SDK was imported. A WebSocket subscription was opened to listen for `INSERT` and `UPDATE` events on the `public:complaints` channel. When an event fires, the JS dynamically manipulates the DOM to add new rows or update status badges instantly.
-- **Predictive Mapping:** `Leaflet.js` was integrated to render an interactive map on the admin dashboard, plotting complaint hotspots based on geocoordinates.
-
-### 6.6 Serverless Deployment (Vercel)
-To make the platform publicly accessible, it was deployed to Vercel's serverless infrastructure.
-- **Vercel Configuration:** A `vercel.json` file was created at the root directory to instruct Vercel to treat `app.py` as a serverless function and route all incoming HTTP traffic to it.
-- **Dependency Management:** All required Python packages were strictly versioned in `requirements.txt` to ensure Vercel's build container could install them successfully.
-- **Environment Injection:** The `.env` variables were securely transferred to the Vercel Project Settings dashboard.
+- **Generative AI Triage:** The Groq SDK is used to categorize and prioritize complaints using Llama 3 models.
+- **Proof of Work (Vision AI):** Llama 3.2 Vision is used to compare images for automated resolution verification.
 
 ---
 
@@ -430,8 +403,7 @@ The implementation of "Proof of Work" visual verification ensures unprecedented 
 3. **Social Media Scraping:** Implementing a module to automatically scrape and log complaints from platforms like Twitter/X when the municipal handle is tagged.
 
 ### Bibliography
-1. Flask Documentation: https://flask.palletsprojects.com/
-2. Supabase Realtime Architecture: https://supabase.com/docs/guides/realtime
-3. Google Generative AI (Gemini) API Documentation: https://ai.google.dev/
-4. Leaflet.js Interactive Maps: https://leafletjs.com/
-5. CSS Glassmorphism Principles: Modern Web Design Practices (2024).
+1. Supabase Documentation: https://supabase.com/docs
+2. Groq Cloud API: https://console.groq.com/docs
+3. Vercel Static Hosting: https://vercel.com/docs/concepts/projects/static-sites
+4. CSS Glassmorphism Principles: Modern Web Design Practices (2026).
