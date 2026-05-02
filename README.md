@@ -1,44 +1,36 @@
 # ⚡ GRIEEVIO – AI-Powered Civic Governance Platform
 
-GRIEEVIO is a cutting-edge civic platform designed to bridge the gap between citizens and local authorities using AI-driven automation, real-time tracking, and visual proof-of-work.
+GRIEEVIO is a cutting-edge, **solely serverless** civic platform designed to bridge the gap between citizens and local authorities using AI-driven automation, real-time tracking, and visual proof-of-work.
 
 ## 🚀 Quick Deploy to Vercel
 
-1. **Push this repository** to your GitHub account.
-2. **Import the project** in Vercel.
-3. **Configure Environment Variables** in Vercel Settings:
-
-| Key | Description |
-|---|---|
-| `DATABASE_URL` | Your Supabase PostgreSQL connection string |
-| `GROQ_API_KEY` | Your API key from [Groq Console](https://console.groq.com) |
-| `SUPABASE_URL` | Your Supabase Project URL |
-| `SUPABASE_KEY` | Your Supabase Service Role or Anon key |
-| `SECRET_KEY` | A random string for session security |
-
-4. **Deploy!** Vercel will automatically detect the configuration in `vercel.json`.
+1.  **Push this repository** to your GitHub account.
+2.  **Import the project** in Vercel.
+3.  **Deploy!** Vercel will automatically detect the configuration in `vercel.json` and host it as a high-performance static SPA.
 
 ## 🛠️ Tech Stack
-- **Backend**: Python (Flask)
+- **Architecture**: Static Single Page Application (SPA)
 - **Frontend**: HTML5, CSS3 (Glassmorphism), Vanilla JS
+- **Backend (Serverless)**: Supabase Edge Functions (TypeScript/Deno)
 - **AI Engine**: Groq (Llama 3.3-70b + Llama 3.2 Vision)
 - **Database**: PostgreSQL (via Supabase)
 - **Real-time**: Supabase Realtime (WebSockets)
-- **Deployment**: Vercel Serverless Functions
+- **Hosting**: Vercel (Static)
 
-## 📁 Key Files
-- `app.py`: Main Flask application logic
-- `ai_engine.py`: AI-driven classification and verification
-- `models.py`: Database schemas
-- `api/index.py`: Vercel serverless entry point
-- `vercel.json`: Deployment configuration
+## 📁 Key Files & Directories
+- `static/js/app.js`: Central configuration and auth logic.
+- `static/js/complaints.js`: Logic for submitting and viewing complaints.
+- `static/js/admin.js`: Real-time admin dashboard logic.
+- `supabase/functions/`: Serverless AI logic (Edge Functions).
+- `supabase_schema.sql`: Complete database setup script.
+- `vercel.json`: Routing and hosting configuration.
 
 ## ⚖️ Features
-- **Smart Classification**: Auto-routes complaints based on text description.
+- **Smart Classification**: Auto-routes complaints based on text description via AI Edge Functions.
 - **Visual Proof-of-Work**: AI compares 'Before' and 'After' photos to verify resolutions.
-- **Autonomous Escalation**: Automatic priority boosting for SLA breaches.
+- **Real-time Synchronization**: Admin dashboard updates instantly when new complaints arrive.
 - **Gamification**: Citizen badges and points for active reporting.
-- **Multilingual Support**: Real-time translation for diverse communities.
+- **Multilingual Support**: Real-time AI translation for diverse communities.
 
 ---
 © 2026 GRIEEVIO Team.
