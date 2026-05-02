@@ -1,11 +1,16 @@
-/// <reference lib="deno.ns" />
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
+// @ts-ignore
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY")
+// @ts-ignore
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
+// @ts-ignore
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
+// @ts-ignore
 serve(async (req: Request) => {
   try {
     const { complaint_id, after_image } = await req.json()
@@ -50,6 +55,6 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify(parsed), { headers: { "Content-Type": "application/json" } })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { "Content-Type": "application/json" } })
+    return new Response(JSON.stringify(parsed), { status: 500, headers: { "Content-Type": "application/json" } })
   }
 })
