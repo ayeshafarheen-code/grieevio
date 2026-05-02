@@ -23,8 +23,8 @@
         </div>
     </nav>
 
-    <main class="auth-container">
-        <div class="auth-card glass">
+    <main class="auth-page">
+        <div class="auth-card">
             <div class="auth-header">
                 <h2>Welcome Back</h2>
                 <p>Login to track your complaints</p>
@@ -32,7 +32,7 @@
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+                    <input type="email" id="email" class="form-control" placeholder="name@example.com" autocomplete="off" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
