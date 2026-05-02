@@ -19,6 +19,10 @@ class Config:
     
     SQLALCHEMY_DATABASE_URI = db_url or ('sqlite:///' + os.path.join(BASE_DIR, 'grieevio.db'))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Log database type for deployment verification
+    print(f" * Using Database: {'PostgreSQL' if 'postgresql' in SQLALCHEMY_DATABASE_URI else 'SQLite'}")
+    
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
     

@@ -50,6 +50,19 @@ def seed_demo_data():
 
 # Create tables and directories on startup
 with app.app_context():
+    print("--- GRIEEVIO STARTUP ---")
+    print(f"Environment: {'Vercel' if os.environ.get('VERCEL') else 'Local'}")
+    print(f"Database: {str(db.engine.url.drivername)}")
+    
+    # Check for critical keys (logs only presence, not values)
+    keys = {
+        'GROQ_API_KEY': bool(app.config.get('GROQ_API_KEY')),
+        'DATABASE_URL': bool(os.environ.get('DATABASE_URL')),
+        'SUPABASE_URL': bool(app.config.get('SUPABASE_URL'))
+    }
+    for key, exists in keys.items():
+        print(f"Config {key}: {'[OK]' if exists else '[MISSING]'}")
+
     try:
         db.create_all()
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -57,10 +70,19 @@ with app.app_context():
         
         # Auto-seed for Vercel demo robustness
         seed_demo_data()
-        
-        print("Database and upload folders initialized.")
+        print("✓ System initialization complete.")
     except Exception as e:
-        print(f"Startup warning: {e}")
+        print(f"Startup Warning: {e}")
+    print("------------------------")
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    return jsonify({
+        'error': 'Internal Server Error',
+        'message': str(e),
+        'context': 'Vercel Deployment' if os.environ.get('VERCEL') else 'Local Development'
+    }), 500
 
 
 @app.route('/health')
