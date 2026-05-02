@@ -1,159 +1,116 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   GRIEEVIO – Core Supabase Auth & Shared Utilities
+   GRIEEVIO – Final Supabase Auth & Vercel Optimized Logic
    ═══════════════════════════════════════════════════════════════════════════ */
 
-// ─── Supabase Configuration ────────────────────────────────────────────────
 const SUPABASE_URL = "https://kucuqbijevjtrpigcvss.supabase.co"; 
 const SUPABASE_KEY = "sb_publishable_31sQhl2dQv8nryFyOYEvEA_8sDVJdA9";
 
-// Initialize the Supabase client
+// Initialize Supabase
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── Auth State Management ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check initial session
     const { data: { session } } = await supabase.auth.getSession();
-    handleAuthState(session);
+    checkAuth(session);
 
-    // Listen for auth changes
     supabase.auth.onAuthStateChange((event, session) => {
-        console.log(`Auth Event: ${event}`, session);
-        handleAuthState(session);
+        console.log("Auth Event:", event);
+        checkAuth(session);
     });
 });
 
-function handleAuthState(session) {
-    const path = window.location.pathname;
-    const isPublicPage = ['/', '/index.html', '/login.html', '/register.html'].includes(path) || path === '';
+function checkAuth(session) {
+    const path = window.location.pathname.replace(/\/$/, ""); // Remove trailing slash
     
-    if (!session && !isPublicPage) {
-        // Redirect to login if trying to access protected page
-        window.location.href = '/login.html';
-    } else if (session && (path === '/login.html' || path === '/register.html')) {
-        // Redirect to dashboard if already logged in and on auth pages
-        window.location.href = '/dashboard.html';
+    // Define public routes (handling both .html and clean URLs)
+    const publicRoutes = ["", "/", "/index", "/index.html", "/login", "/login.html", "/register", "/register.html"];
+    const isPublic = publicRoutes.includes(path);
+
+    if (!session && !isPublic) {
+        window.location.href = "/login.html";
+    } else if (session && (path === "/login" || path === "/login.html" || path === "/register" || path === "/register.html")) {
+        window.location.href = "/dashboard.html";
     }
 }
 
-// ─── Login Function ────────────────────────────────────────────────────────
+// ─── Login ────────────────────────────────────────────────────────────────
 async function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-
     const btn = e.target.querySelector('button');
+
+    if (!email || !password) return;
+
     btn.disabled = true;
-    btn.textContent = 'Logging in...';
+    btn.innerHTML = '<span>⏳ Logging in...</span>';
 
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
-        showToast('Success! Redirecting...', 'success');
-        
-        // Wait a bit for session to settle
+        showToast('Welcome back!', 'success');
         const role = data.user.user_metadata?.role || 'citizen';
         setTimeout(() => {
             window.location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
-        }, 1000);
-
+        }, 800);
     } catch (err) {
-        console.error('Login Error:', err);
         showToast(err.message, 'error');
         btn.disabled = false;
-        btn.textContent = 'Login 🚀';
+        btn.innerHTML = 'Login 🚀';
     }
 }
 
-// ─── Register Function ─────────────────────────────────────────────────────
+// ─── Register ─────────────────────────────────────────────────────────────
 async function handleRegister(e) {
     e.preventDefault();
     const username = document.getElementById('username').value.trim();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const phone = document.getElementById('phone')?.value || '';
-    const language = document.getElementById('language')?.value || 'en';
 
     const btn = e.target.querySelector('button');
     btn.disabled = true;
-    btn.textContent = 'Creating Account...';
+    btn.innerHTML = '<span>⏳ Creating Account...</span>';
 
     try {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                data: {
-                    username,
-                    phone,
-                    language_pref: language,
-                    role: 'citizen'
-                }
+                data: { username, phone, role: 'citizen' }
             }
         });
-
         if (error) throw error;
 
         if (data.session) {
-            showToast('Account created! Redirecting...', 'success');
-            setTimeout(() => window.location.href = '/dashboard.html', 1500);
+            showToast('Success! Redirecting...', 'success');
+            setTimeout(() => window.location.href = '/dashboard.html', 1000);
         } else {
-            showToast('Account created! Please CHECK YOUR EMAIL to confirm your account before logging in.', 'info');
-            setTimeout(() => window.location.href = '/login.html', 4000);
+            showToast('Please check your email to confirm registration!', 'info');
+            setTimeout(() => window.location.href = '/login.html', 3000);
         }
-
     } catch (err) {
-        console.error('Registration Error:', err);
         showToast(err.message, 'error');
         btn.disabled = false;
-        btn.textContent = 'Register 🚀';
+        btn.innerHTML = 'Register 🚀';
     }
 }
 
-// ─── Logout Function ───────────────────────────────────────────────────────
+// ─── Logout ───────────────────────────────────────────────────────────────
 async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = '/login.html';
+    window.location.href = "/login.html";
 }
 
-// ─── UI Utilities ──────────────────────────────────────────────────────────
-function showToast(message, type = 'info') {
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
+// ─── Shared Utilities ─────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
+    toast.textContent = msg;
+    document.body.appendChild(toast);
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 500);
     }, 4000);
-}
-
-function formatDate(isoStr) {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function getStatusBadge(status) {
-    const s = status || 'Submitted';
-    return `<span class="badge badge-${s.toLowerCase().replace(' ', '-')}">${s}</span>`;
-}
-
-function getPriorityBadge(priority) {
-    const p = priority || 'Medium';
-    return `<span class="badge badge-priority-${p.toLowerCase()}">${p}</span>`;
-}
-
-function getCategoryBadge(category) {
-    return `<span class="badge badge-category">${category || 'General'}</span>`;
 }
