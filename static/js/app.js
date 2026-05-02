@@ -25,10 +25,15 @@ const SUPABASE_URL = "https://kucuqbijevjtrpigcvss.supabase.co";
 const SUPABASE_KEY = "sb_publishable_31sQhl2dQv8nryFyOYEvEA_8sDVJdA9";
 
 let supabase;
-if (SUPABASE_URL && SUPABASE_KEY) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-} else {
-    console.warn("Supabase credentials missing. Please set SUPABASE_URL and SUPABASE_KEY.");
+try {
+    if (SUPABASE_URL && SUPABASE_KEY) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("✅ Supabase client initialized.");
+    } else {
+        console.error("❌ Supabase credentials missing!");
+    }
+} catch (e) {
+    console.error("❌ Failed to initialize Supabase:", e);
 }
 
 // ─── API Helpers ───────────────────────────────────────────────────────────
@@ -59,16 +64,18 @@ async function handleLogin(e) {
 
     try {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        console.log('Login Result:', data);
         if (error) throw error;
 
         showToast('Login successful!', 'success');
         
-        // Check role (stored in metadata or a separate profile table)
         const user = data.user;
-        const role = user.user_metadata?.role || 'citizen';
+        const role = user?.user_metadata?.role || 'citizen';
+        console.log('User Role:', role);
 
         setTimeout(() => {
-            window.location.href = role === 'admin' ? '/admin' : '/dashboard';
+            // Using absolute paths for better compatibility
+            window.location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
         }, 500);
     } catch (err) {
         showToast(err.message, 'error');
