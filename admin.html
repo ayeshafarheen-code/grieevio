@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – GRIEEVIO</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="dashboard-body">
+    <div class="bg-effects">
+        <div class="orb orb-3"></div>
+        <div class="orb orb-1"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar glass admin-sidebar">
+        <div class="sidebar-header">
+            <span class="brand-icon">⚡</span> GRIEEVIO ADMIN
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/admin.html" class="nav-link active">📊 Statistics</a>
+            <a href="/admin.html" class="nav-link">📝 Manage Issues</a>
+            <a href="/dashboard.html" class="nav-link">👤 Citizen View</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn btn-sm btn-danger btn-block" onclick="handleLogout()">🚪 Logout</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="content-header">
+            <div>
+                <h1>Admin Control Center</h1>
+                <p>System-wide monitoring and grievance resolution</p>
+            </div>
+            <div class="admin-pill glass">
+                <span class="status-dot pulse"></span>
+                System Live
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4 id="admin-total">0</h4>
+                <p>Total Complaints</p>
+            </div>
+            <div class="stat-card">
+                <h4 id="admin-submitted">0</h4>
+                <p>New / Submitted</p>
+            </div>
+            <div class="stat-card highlight-blue">
+                <h4 id="admin-progress">0</h4>
+                <p>In Progress</p>
+            </div>
+            <div class="stat-card highlight">
+                <h4 id="admin-resolved">0</h4>
+                <p>Resolved Cases</p>
+            </div>
+            <div class="stat-card highlight-red">
+                <h4 id="admin-rejected">0</h4>
+                <p>Rejected</p>
+            </div>
+            <div class="stat-card">
+                <h4 id="admin-rate">0%</h4>
+                <p>Resolution Rate</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="glass chart-card" style="padding: 1.5rem;">
+                <h3 style="margin-bottom:1.5rem;">Category Distribution</h3>
+                <div id="category-chart" class="bar-chart"></div>
+            </div>
+            <div class="glass chart-card" style="padding: 1.5rem;">
+                <h3 style="margin-bottom:1.5rem;">Priority Levels</h3>
+                <div id="priority-chart" class="bar-chart"></div>
+            </div>
+        </div>
+
+        <!-- Complaints Table -->
+        <section class="complaints-section glass" style="overflow-x: auto;">
+            <div class="section-title">
+                <h2>Manage Grievances</h2>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-type="status" onclick="adminFilter('status', '')">All</button>
+                    <button class="filter-btn" data-type="status" onclick="adminFilter('status', 'Submitted')">New</button>
+                    <button class="filter-btn" data-type="status" onclick="adminFilter('status', 'In Progress')">Active</button>
+                    <button class="filter-btn" data-type="status" onclick="adminFilter('status', 'Resolved')">Fixed</button>
+                </div>
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Complaint Details</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Date</th>
+                        <th>Assets</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-complaints-body">
+                    <!-- Loaded via JS -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        window.SUPABASE_URL = ""; 
+        window.SUPABASE_KEY = "";
+    </script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/admin.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user || user.user_metadata?.role !== 'admin') {
+                showToast("Admin access required", "error");
+                setTimeout(() => window.location.href = '/dashboard.html', 1000);
+                return;
+            }
+            loadAdminDashboard();
+        });
+    </script>
+</body>
+</html>

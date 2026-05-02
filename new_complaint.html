@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Complaint – GRIEEVIO</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="bg-effects">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="/" class="navbar-brand"><span class="brand-icon">⚡</span> GRIEEVIO</a>
+            <ul class="navbar-nav">
+                <li><a href="/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="/new-complaint.html" class="nav-link active">New Complaint</a></li>
+                <li><a href="/track.html" class="nav-link">Track</a></li>
+                <li><a href="/profile.html" class="nav-link">Profile</a></li>
+                <li><a href="#" class="nav-link" onclick="handleLogout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="complaint-form-wrapper">
+            <div class="page-header" style="justify-content: center; text-align: center;">
+                <div>
+                    <h1>📝 Submit a Complaint</h1>
+                    <p class="subtitle">Describe your issue using text or voice — our AI will classify and route it automatically</p>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <!-- Emergency One-Tap Button -->
+                <button type="button" class="btn btn-emergency" onclick="triggerEmergency()">
+                    🚨 EMERGENCY ONE-TAP REPORT
+                </button>
+                <p style="text-align: center; font-size: 0.8rem; color: var(--accent-danger); margin: 0.5rem 0 1.5rem; font-weight: 600;">
+                    Use only for life-threatening issues (Fallen wires, major road blocks, etc.)
+                </p>
+
+                <!-- Input Mode Toggle -->
+                <div class="input-mode-toggle">
+                    <button class="mode-btn active" id="text-mode-btn" onclick="switchMode('text')">⌨️ Text Input</button>
+                    <button class="mode-btn" id="voice-mode-btn" onclick="switchMode('voice')">🎙️ Voice Input</button>
+                </div>
+
+                <!-- Voice Input Area -->
+                <div class="voice-area" id="voice-area" style="display: none;">
+                    <div class="voice-steps">
+                        <div class="voice-step active" id="voice-step-1-indicator">
+                            <div class="voice-step-number">1</div>
+                            <span>Title</span>
+                        </div>
+                        <div class="voice-step-line" id="voice-step-line"></div>
+                        <div class="voice-step" id="voice-step-2-indicator">
+                            <div class="voice-step-number">2</div>
+                            <span>Description</span>
+                        </div>
+                    </div>
+                    <!-- Voice steps content (simplified for brevity) -->
+                    <div id="voice-step-1" class="voice-step-content">
+                        <h4>🏷️ Step 1: Speak your title</h4>
+                        <button class="voice-btn" onclick="toggleVoiceStep(1)">🎤</button>
+                        <div class="voice-status" id="voice-status-1">Click the mic to record</div>
+                        <div class="voice-preview" id="voice-preview-1" style="display: none;">
+                            <p id="voice-preview-text-1"></p>
+                        </div>
+                    </div>
+                    <div id="voice-step-2" class="voice-step-content" style="display: none;">
+                        <h4>📝 Step 2: Describe the issue</h4>
+                        <button class="voice-btn" onclick="toggleVoiceStep(2)">🎤</button>
+                        <div class="voice-status" id="voice-status-2">Speak now...</div>
+                        <div class="voice-preview" id="voice-preview-2" style="display: none;">
+                            <p id="voice-preview-text-2"></p>
+                        </div>
+                    </div>
+                    <div class="voice-nav">
+                        <button class="btn btn-secondary btn-sm" id="voice-back-btn" onclick="voiceGoBack()" style="display: none;">← Back</button>
+                        <button class="btn btn-primary btn-sm" id="voice-next-btn" onclick="voiceGoNext()">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Image Capture Area -->
+                <div class="image-capture-area" style="margin-top: 1.5rem; border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">📸 Capture Evidence</h4>
+                    <div id="camera-container" style="display: none; position: relative;">
+                        <video id="camera-video" width="100%" autoplay playsinline></video>
+                        <canvas id="camera-canvas" style="display: none;"></canvas>
+                        <div class="camera-controls">
+                            <button class="btn btn-primary" onclick="capturePhoto()">📸 Capture</button>
+                            <button class="btn btn-secondary" onclick="stopCamera()">❌ Close</button>
+                        </div>
+                    </div>
+                    <div id="image-preview-container" style="display: none;">
+                        <img id="image-preview" src="" style="width: 100%; border-radius: 8px;">
+                        <button class="btn btn-danger" onclick="clearPhoto()">🗑️ Remove</button>
+                        <div id="geo-tag-status">📍 <span id="geo-text">Getting location...</span></div>
+                    </div>
+                    <div id="capture-placeholder" style="text-align: center; padding: 1.5rem; border: 2px dashed var(--border-glass);">
+                        <button type="button" class="btn btn-secondary" onclick="startCamera()">📷 Open Camera</button>
+                        <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('image-upload').click()">📁 Upload</button>
+                    </div>
+                </div>
+
+                <form id="complaint-form" onsubmit="handleSubmitComplaint(event)">
+                    <div class="form-group">
+                        <label for="complaint-title">Complaint Title</label>
+                        <input type="text" id="complaint-title" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="complaint-desc">Description</label>
+                        <textarea id="complaint-desc" class="form-control" required oninput="onDescriptionChange()"></textarea>
+                        <span class="language-indicator" id="language-indicator" style="display: none;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="complaint-location">Location</label>
+                        <input type="text" id="complaint-location" class="form-control">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="complaint-urgent">
+                        <label for="complaint-urgent">⚠️ Urgent Issue</label>
+                    </div>
+                    <div id="ai-suggestion" class="ai-suggestion" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">📩 Submit Complaint</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.SUPABASE_URL = ""; 
+        window.SUPABASE_KEY = "";
+    </script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/voice.js"></script>
+    <script src="/static/js/complaints.js"></script>
+    <script>
+        // Integration Logic (Camera, Voice)
+        let voiceTitle = null, voiceDesc = null, currentVoiceStep = 1;
+        function switchMode(mode) {
+            document.getElementById('text-mode-btn').classList.toggle('active', mode === 'text');
+            document.getElementById('voice-mode-btn').classList.toggle('active', mode === 'voice');
+            document.getElementById('voice-area').style.display = mode === 'voice' ? 'block' : 'none';
+        }
+        function toggleVoiceStep(step) { /* uses voice.js */ }
+        function voiceGoNext() { if (currentVoiceStep === 1) { currentVoiceStep = 2; showVoiceStep(2); } }
+        function voiceGoBack() { if (currentVoiceStep === 2) { currentVoiceStep = 1; showVoiceStep(1); } }
+        function showVoiceStep(step) {
+            document.getElementById('voice-step-1').style.display = step === 1 ? 'block' : 'none';
+            document.getElementById('voice-step-2').style.display = step === 2 ? 'block' : 'none';
+        }
+
+        // Camera
+        let cameraStream = null;
+        window.capturedImage = null; window.latitude = null; window.longitude = null;
+
+        async function startCamera() {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById('camera-video').srcObject = cameraStream;
+            document.getElementById('camera-container').style.display = 'block';
+            document.getElementById('capture-placeholder').style.display = 'none';
+        }
+        function stopCamera() {
+            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+            document.getElementById('camera-container').style.display = 'none';
+        }
+        function capturePhoto() {
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            window.capturedImage = canvas.toDataURL('image/jpeg');
+            document.getElementById('image-preview').src = window.capturedImage;
+            document.getElementById('image-preview-container').style.display = 'block';
+            stopCamera();
+            getGeoLocation();
+        }
+        function handleFileUpload(e) {
+            const reader = new FileReader();
+            reader.onload = (f) => { window.capturedImage = f.target.result; document.getElementById('image-preview').src = f.target.result; document.getElementById('image-preview-container').style.display = 'block'; document.getElementById('capture-placeholder').style.display = 'none'; getGeoLocation(); };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+        function clearPhoto() { window.capturedImage = null; document.getElementById('image-preview-container').style.display = 'none'; document.getElementById('capture-placeholder').style.display = 'block'; }
+        function getGeoLocation() {
+            navigator.geolocation.getCurrentPosition(p => { window.latitude = p.coords.latitude; window.longitude = p.coords.longitude; document.getElementById('geo-text').textContent = "Geo-tagged: " + window.latitude.toFixed(4) + ", " + window.longitude.toFixed(4); });
+        }
+        async function triggerEmergency() {
+            if (confirm("Send emergency alert?")) {
+                getGeoLocation();
+                setTimeout(() => handleSubmitComplaint({ preventDefault: () => {}, target: { querySelector: () => ({ disabled: false, textContent: '' }) } }), 1000);
+            }
+        }
+    </script>
+</body>
+</html>

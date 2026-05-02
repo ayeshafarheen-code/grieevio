@@ -6,6 +6,8 @@
     <meta name="description" content="GRIEEVIO - AI-powered civic complaint management system. Report civic issues using voice or text in any language.">
     <title>GRIEEVIO – Smart Complaint Management</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Background Effects -->
@@ -23,8 +25,8 @@
             </a>
             <ul class="navbar-nav">
                 <li><a href="/" class="nav-link active">Home</a></li>
-                <li><a href="/login" class="nav-link">Login</a></li>
-                <li><a href="/register" class="nav-link btn-nav">Get Started</a></li>
+                <li><a href="/login.html" class="nav-link">Login</a></li>
+                <li><a href="/register.html" class="nav-link btn-nav">Get Started</a></li>
             </ul>
         </div>
     </nav>
@@ -46,8 +48,8 @@
                 to the right authorities instantly.
             </p>
             <div class="hero-buttons">
-                <a href="/register" class="btn btn-primary">🚀 Register Now</a>
-                <a href="/login" class="btn btn-secondary">🔑 Login</a>
+                <a href="/register.html" class="btn btn-primary">🚀 Register Now</a>
+                <a href="/login.html" class="btn btn-secondary">🔑 Login</a>
             </div>
         </div>
     </section>
@@ -134,17 +136,30 @@
         <p>© 2026 <span class="footer-brand">GRIEEVIO</span> — AI-Powered Civic Complaint Management System</p>
     </footer>
 
+    <!-- Configuration Helper -->
+    <script>
+        // These should ideally be injected by your build tool (Vercel)
+        window.SUPABASE_URL = ""; 
+        window.SUPABASE_KEY = "";
+    </script>
     <script src="/static/js/app.js"></script>
     <script>
-        // Fetch public stats for dashboard
+        // Fetch public stats for dashboard directly from Supabase
         async function fetchPublicStats() {
+            if (!supabase) return;
             try {
-                const response = await fetch('/api/public/stats');
-                const data = await response.json();
-                document.getElementById('stat-total').innerText = data.total;
-                document.getElementById('stat-resolved').innerText = data.resolved;
-                document.getElementById('stat-rate').innerText = data.resolution_rate + '%';
-                document.getElementById('stat-active').innerText = data.active_now;
+                const { data, error } = await supabase.from('complaints').select('status');
+                if (error) throw error;
+
+                const total = data.length;
+                const resolved = data.filter(c => c.status === 'Resolved').length;
+                const rate = total ? Math.round((resolved / total) * 100) : 0;
+                const active = data.filter(c => c.status === 'In Progress' || c.status === 'Submitted').length;
+
+                document.getElementById('stat-total').innerText = total;
+                document.getElementById('stat-resolved').innerText = resolved;
+                document.getElementById('stat-rate').innerText = rate + '%';
+                document.getElementById('stat-active').innerText = active;
             } catch (err) {
                 console.error('Error fetching stats:', err);
             }

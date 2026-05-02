@@ -17,30 +17,31 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// ─── Supabase Configuration ────────────────────────────────────────────────
+// These should be set in Vercel Environment Variables or a config.js
+const SUPABASE_URL = window.SUPABASE_URL || ""; 
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+
+let supabase;
+if (SUPABASE_URL && SUPABASE_KEY) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} else {
+    console.warn("Supabase credentials missing. Please set SUPABASE_URL and SUPABASE_KEY.");
+}
+
 // ─── API Helpers ───────────────────────────────────────────────────────────
+// Note: apiCall is mostly replaced by direct Supabase calls, but kept for Edge Functions
 async function apiCall(url, method = 'GET', body = null) {
     const opts = {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin'
+        headers: { 'Content-Type': 'application/json' }
     };
     if (body) opts.body = JSON.stringify(body);
 
     try {
         const res = await fetch(url, opts);
-        
-        // Handle session expiration or unauthorized access
-        if (res.status === 401 && !url.includes('/api/login')) {
-            console.warn('Session expired or unauthorized. Redirecting to login...');
-            window.location.href = '/login';
-            return;
-        }
-
         const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.error || `Request failed with status ${res.status}`);
-        }
+        if (!res.ok) throw new Error(data.error || `Request failed with status ${res.status}`);
         return data;
     } catch (err) {
         console.error(`API Call Error (${url}):`, err);
@@ -48,21 +49,24 @@ async function apiCall(url, method = 'GET', body = null) {
     }
 }
 
-// ─── Auth Functions ────────────────────────────────────────────────────────
+// ─── Auth Functions (Migrated to Supabase) ──────────────────────────────────
 async function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
     try {
-        const data = await apiCall('/api/login', 'POST', { email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
         showToast('Login successful!', 'success');
+        
+        // Check role (stored in metadata or a separate profile table)
+        const user = data.user;
+        const role = user.user_metadata?.role || 'citizen';
+
         setTimeout(() => {
-            if (data.user.role === 'admin') {
-                window.location.href = '/admin';
-            } else {
-                window.location.href = '/dashboard';
-            }
+            window.location.href = role === 'admin' ? '/admin' : '/dashboard';
         }, 500);
     } catch (err) {
         showToast(err.message, 'error');
@@ -78,9 +82,24 @@ async function handleRegister(e) {
     const language = document.getElementById('language')?.value || 'en';
 
     try {
-        await apiCall('/api/register', 'POST', { username, email, password, phone, language_pref: language });
-        showToast('Registration successful!', 'success');
-        setTimeout(() => window.location.href = '/dashboard', 500);
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    username,
+                    phone,
+                    language_pref: language,
+                    role: 'citizen',
+                    points: 0,
+                    badge: 'None'
+                }
+            }
+        });
+        if (error) throw error;
+
+        showToast('Registration successful! Check your email if verification is enabled.', 'success');
+        setTimeout(() => window.location.href = '/dashboard', 1000);
     } catch (err) {
         showToast(err.message, 'error');
     }
@@ -88,11 +107,25 @@ async function handleRegister(e) {
 
 async function handleLogout() {
     try {
-        await apiCall('/api/logout', 'POST');
+        await supabase.auth.signOut();
         window.location.href = '/';
     } catch (err) {
         window.location.href = '/';
     }
+}
+
+// ─── Session Listener ──────────────────────────────────────────────────────
+if (supabase) {
+    supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state change:', event, session);
+        if (event === 'SIGNED_OUT') {
+            // Optional: Redirect to login if on a protected page
+            const protectedPages = ['/dashboard', '/admin', '/new-complaint', '/track', '/profile'];
+            if (protectedPages.includes(window.location.pathname)) {
+                window.location.href = '/login';
+            }
+        }
+    });
 }
 
 // ─── Status Badge Helper ──────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   GRIEEVIO – Complaint Form & User Dashboard Logic
+   GRIEEVIO – Complaint Form & User Dashboard Logic (Supabase Migrated)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 // ─── User Dashboard ────────────────────────────────────────────────────────
@@ -10,11 +10,19 @@ async function loadDashboard() {
     const statsResolved = document.getElementById('stat-resolved');
     const statsTotal = document.getElementById('stat-total');
 
-    if (!listEl) return;
+    if (!listEl || !supabase) return;
 
     try {
-        const data = await apiCall('/api/complaints');
-        const complaints = data.complaints;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: complaints, error } = await supabase
+            .from('complaints')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
 
         // Update stats
         if (statsTotal) statsTotal.textContent = complaints.length;
@@ -60,7 +68,7 @@ async function loadDashboard() {
 // ─── Filter Complaints ────────────────────────────────────────────────────
 function filterComplaints(status) {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
+    if (window.event) window.event.target.classList.add('active');
 
     document.querySelectorAll('.complaint-card').forEach(card => {
         const badge = card.querySelector('.badge-submitted, .badge-in-progress, .badge-resolved, .badge-rejected');
@@ -75,8 +83,13 @@ function filterComplaints(status) {
 // ─── View Complaint Detail ─────────────────────────────────────────────────
 async function viewComplaint(id) {
     try {
-        const data = await apiCall(`/api/complaints/${id}`);
-        const c = data.complaint;
+        const { data: c, error } = await supabase
+            .from('complaints')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -130,7 +143,13 @@ async function viewComplaint(id) {
 async function deleteComplaint(id) {
     if (!confirm('Are you sure you want to delete this complaint?')) return;
     try {
-        await apiCall(`/api/complaints/${id}`, 'DELETE');
+        const { error } = await supabase
+            .from('complaints')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
         showToast('Complaint deleted', 'success');
         loadDashboard();
     } catch (err) {
@@ -144,6 +163,9 @@ async function handleSubmitComplaint(e) {
     const title = document.getElementById('complaint-title').value.trim();
     const description = document.getElementById('complaint-desc').value.trim();
     const location = document.getElementById('complaint-location').value.trim();
+    const is_urgent = document.getElementById('complaint-urgent')?.checked || false;
+    const lat = window.latitude || null;
+    const lng = window.longitude || null;
 
     if (!title || !description) {
         showToast('Please fill in title and description', 'error');
@@ -154,28 +176,51 @@ async function handleSubmitComplaint(e) {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Processing with AI...';
 
-    const is_urgent = document.getElementById('complaint-urgent')?.checked || false;
-
     try {
-        const data = await apiCall('/api/complaints', 'POST', { title, description, location, is_urgent });
-        const ai = data.ai_info;
-
-        showToast(`Complaint filed! Category: ${ai.category} (${ai.confidence}% confidence)`, 'success');
-
-        // Show AI result
-        const aiBox = document.getElementById('ai-result');
-        if (aiBox) {
-            aiBox.style.display = 'flex';
-            aiBox.innerHTML = `
-                <span class="ai-icon">🤖</span>
-                <div class="ai-text">
-                    <strong>AI Classification Result</strong>
-                    Category: ${ai.category} · Confidence: ${ai.confidence}% · Language: ${ai.detected_language}
-                </div>
-            `;
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // 1. Upload image if exists
+        let image_path = null;
+        if (window.capturedImage) {
+            const fileName = `complaint_${Date.now()}.jpg`;
+            const blob = await (await fetch(window.capturedImage)).blob();
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('complaints')
+                .upload(`${user.id}/${fileName}`, blob);
+            
+            if (uploadError) console.error("Image upload failed:", uploadError);
+            else image_path = uploadData.path;
         }
 
-        setTimeout(() => window.location.href = '/dashboard', 2000);
+        // 2. Insert complaint (AI will be processed via Supabase Edge Function / Trigger)
+        const { data, error } = await supabase
+            .from('complaints')
+            .insert({
+                user_id: user.id,
+                title,
+                description,
+                location,
+                is_urgent,
+                latitude: lat,
+                longitude: lng,
+                image_path: image_path,
+                status: 'Submitted'
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        showToast(`Complaint filed successfully! AI is analyzing...`, 'success');
+
+        // Optional: Call Edge Function explicitly if no DB trigger
+        try {
+            await supabase.functions.invoke('process-complaint', {
+                body: { complaint_id: data.id }
+            });
+        } catch (e) { console.warn("AI Trigger skipped:", e); }
+
+        setTimeout(() => window.location.href = '/dashboard', 1500);
     } catch (err) {
         showToast(err.message, 'error');
         submitBtn.disabled = false;
@@ -188,46 +233,50 @@ let classifyTimeout;
 function onDescriptionChange() {
     clearTimeout(classifyTimeout);
     const text = document.getElementById('complaint-desc')?.value || '';
-
     if (text.length < 10) return;
 
     classifyTimeout = setTimeout(async () => {
         try {
-            // Detect language
-            const langData = await apiCall('/api/detect-language', 'POST', { text });
+            const { data, error } = await supabase.functions.invoke('preview-ai', {
+                body: { text }
+            });
+            if (error) return;
+
             const langEl = document.getElementById('language-indicator');
             if (langEl) {
                 langEl.style.display = 'inline-flex';
-                langEl.innerHTML = `🌐 ${langData.language_name}`;
+                langEl.innerHTML = `🌐 ${data.language_name}`;
             }
 
-            // Classify
-            const classData = await apiCall('/api/classify', 'POST', { text });
             const suggEl = document.getElementById('ai-suggestion');
-            if (suggEl && classData.category !== 'Other') {
+            if (suggEl && data.category !== 'Other') {
                 suggEl.style.display = 'flex';
                 suggEl.innerHTML = `
                     <span class="ai-icon">🤖</span>
                     <div class="ai-text">
-                        <strong>AI suggests: ${classData.category}</strong>
-                        Confidence: ${classData.confidence}%
+                        <strong>AI suggests: ${data.category}</strong>
+                        Confidence: ${data.confidence}%
                     </div>
                 `;
             }
-        } catch (e) {
-            // Silently fail for preview
-        }
-    }, 600);
+        } catch (e) { /* silent */ }
+    }, 1000);
 }
 
 // ─── Track Complaints ──────────────────────────────────────────────────────
 async function loadTrackPage() {
     const container = document.getElementById('track-container');
-    if (!container) return;
+    if (!container || !supabase) return;
 
     try {
-        const data = await apiCall('/api/complaints');
-        const complaints = data.complaints;
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: complaints, error } = await supabase
+            .from('complaints')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
 
         if (complaints.length === 0) {
             container.innerHTML = `
@@ -291,16 +340,4 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
-}
-// ─── Delete Complaint ──────────────────────────────────────────────────────
-async function deleteComplaint(id) {
-    if (!confirm('Are you sure you want to delete this complaint?')) return;
-
-    try {
-        await apiCall(`/api/complaints/${id}`, 'DELETE');
-        showToast('Complaint deleted', 'success');
-        loadDashboard();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
 }

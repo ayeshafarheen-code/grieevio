@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile – GRIEEVIO</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="dashboard-body">
+    <div class="bg-effects">
+        <div class="orb orb-2"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar glass">
+        <div class="sidebar-header">⚡ GRIEEVIO</div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html" class="nav-link">🏠 Dashboard</a>
+            <a href="/new-complaint.html" class="nav-link">🆕 New Complaint</a>
+            <a href="/track.html" class="nav-link">📊 Track Status</a>
+            <a href="/profile.html" class="nav-link active">👤 My Profile</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="content-header">
+            <h1>My Profile</h1>
+            <p>Manage your account and preferences</p>
+        </header>
+
+        <section class="profile-section glass">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar-large" id="profile-initial">U</div>
+                    <div class="profile-info">
+                        <h2 id="display-username">Loading...</h2>
+                        <p id="display-email">Loading...</p>
+                        <div id="badge-container"></div>
+                    </div>
+                </div>
+
+                <form id="profile-form" onsubmit="updateProfile(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="profile-username" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="profile-phone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Language Preference</label>
+                            <select id="profile-lang" class="form-control">
+                                <option value="en">English</option>
+                                <option value="hi">Hindi</option>
+                                <option value="ta">Tamil</option>
+                                <option value="te">Telugu</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        window.SUPABASE_URL = ""; 
+        window.SUPABASE_KEY = "";
+    </script>
+    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { window.location.href = '/login.html'; return; }
+            
+            const meta = user.user_metadata;
+            document.getElementById('display-username').textContent = meta.username || 'User';
+            document.getElementById('display-email').textContent = user.email;
+            document.getElementById('profile-username').value = meta.username || '';
+            document.getElementById('profile-phone').value = meta.phone || '';
+            document.getElementById('profile-lang').value = meta.language_pref || 'en';
+            document.getElementById('profile-initial').textContent = (meta.username || 'U')[0].toUpperCase();
+            
+            if (meta.badge && meta.badge !== 'None') {
+                document.getElementById('badge-container').innerHTML = `<span class="badge badge-resolved">🏆 ${meta.badge} Hero</span>`;
+            }
+        });
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            const username = document.getElementById('profile-username').value;
+            const phone = document.getElementById('profile-phone').value;
+            const language = document.getElementById('profile-lang').value;
+
+            const { error } = await supabase.auth.updateUser({
+                data: { username, phone, language_pref: language }
+            });
+
+            if (error) showToast(error.message, 'error');
+            else {
+                showToast('Profile updated!', 'success');
+                setTimeout(() => location.reload(), 500);
+            }
+        }
+    </script>
+</body>
+</html>
